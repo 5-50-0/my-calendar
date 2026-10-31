@@ -275,7 +275,10 @@ button { cursor: pointer; }
 /* ===== 2·3차 화면 ===== */
 :root { --chart: #CE8886; }
 body[data-screen="work"] #btn-today, body[data-screen="work"] #btn-view, body[data-screen="work"] .pc-only,
-body[data-screen="book"] #btn-today, body[data-screen="book"] #btn-view, body[data-screen="book"] .pc-only { display: none; }
+body[data-screen="book"] #btn-today, body[data-screen="book"] #btn-view, body[data-screen="book"] .pc-only,
+body[data-screen="rules"] #btn-today, body[data-screen="rules"] #btn-view, body[data-screen="rules"] .pc-only { display: none; }
+body[data-screen="rules"] .title-btn svg { display: none; }
+.rules-list .lrow { padding-left: 6px; }
 body[data-screen="work"] .title-btn svg, body[data-screen="book"] .title-btn svg { display: none; }
 .screen { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 28px; }
 .filter { margin-bottom: 12px; }

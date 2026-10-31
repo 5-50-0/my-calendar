@@ -84,7 +84,25 @@
     else f = `매년 ${r.lunar ? '음력 ' : ''}${r.month}월 ${r.day}일`;
     return `${f} · ${r.itemKind === 'todo' ? '할 일' : '일정'} · ${r.start}부터${r.end ? ' ' + r.end + '까지' : ''}`;
   }
-  function openRules() {
+  let ruleFilter = '사용 중';
+  function renderRules(view) {
+    $('#title-text').textContent = '정기업무';
+    const today = A.todayKey();
+    const all = byKind('rule');
+    const ended = r => r.end && r.end < today;
+    const list = all.filter(r => ruleFilter === '전체' || (ruleFilter === '종료' ? ended(r) : !ended(r)))
+      .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title, 'ko'));
+    const cnt = f => all.filter(r => f === '전체' || (f === '종료' ? ended(r) : !ended(r))).length;
+    view.innerHTML = `<div class="screen"><div class="pills filter">${['사용 중', '종료', '전체'].map(f => pill(ruleFilter === f, `data-rf="${f}"`, `${f} ${cnt(f)}`)).join('')}</div>`
+      + `<div class="list rules-list">${list.length ? list.map(r => `<button class="lrow" data-rule="${r.id}"><span class="dot" style="background:${A.colorOf({ kind: r.itemKind, cat: r.cat, sub: r.sub })}"></span><span class="lmain"><span class="lt">${A.esc(r.title)}${ended(r) ? ' <em>(종료)</em>' : ''}</span><span class="ls">${A.esc(ruleSummary(r))}</span></span></button>`).join('')
+        : `<div class="empty" style="padding:24px 4px">${all.length ? '해당하는 정기업무가 없어요' : '아직 등록된 정기업무가 없어요. 오른쪽 위 + 로 추가하세요.<br>매주 회의, 월간 점검, 분기 측정, 생일(음력 포함) 같은 걸 넣으면 달력에 자동으로 표시돼요.'}</div>`}</div></div>`;
+    view.onclick = e => {
+      const f = e.target.closest('[data-rf]'); if (f) { ruleFilter = f.dataset.rf; renderRules(view); return; }
+      const r = e.target.closest('[data-rule]'); if (r) openRuleEdit(r.dataset.rule);
+    };
+  }
+  function openRules() { A.setScreen('rules'); }
+  function openRulesOld() {
     const rules = byKind('rule').sort((a, b) => a.title.localeCompare(b.title, 'ko'));
     const today = A.todayKey();
     A.openModal(`<div class="m-head"><h2>정기업무</h2>${A.closeBtn}</div>`
@@ -143,12 +161,12 @@
           if (!r.title) { $('#r-title', m).focus(); return; }
           if (r.freq === 'weekly' && !(r.days || []).length) { A.toast('요일을 하나 이상 골라주세요'); return; }
           if (r.end && r.end < r.start) { A.toast('종료일이 시작일보다 빨라요'); return; }
-          Store.save(r); A.render(); (back || openRules)(); A.toast('저장했어요');
+          Store.save(r); A.closeModal(); A.render(); if (back) back(); A.toast('저장했어요');
           return;
         }
         if (b.hasAttribute('data-del')) {
           if (!confirm('이 정기업무를 삭제할까요? 달력에서 모든 반복이 사라져요.')) return;
-          Store.remove(r.id); A.render(); openRules();
+          Store.remove(r.id); A.closeModal(); A.render();
           A.toast('삭제했어요', '되돌리기', () => { Store.restore(r.id); A.render(); });
         }
       };
@@ -172,7 +190,7 @@
           if (!confirm(`${A.labelDate(k)}부터 이 정기업무를 끝낼까요? 이전 기록은 그대로 남아요.`)) return;
           r.end = A.addDays(k, -1); Store.save(r); A.closeModal(); A.render(); A.toast('끝냈어요'); return;
         }
-        if (e.target.closest('[data-edit]')) openRuleEdit(rid, () => A.closeModal());
+        if (e.target.closest('[data-edit]')) openRuleEdit(rid);
       };
     });
   }
@@ -830,8 +848,8 @@
     },
     Lunar,
     ruleEntries,
-    renderScreen(sc, view) { view.onclick = null; if (sc === 'work') renderWork(view); else if (sc === 'book') renderBooks(view); },
-    addOnScreen(sc) { if (sc === 'work') openWork(null); else if (sc === 'book') { const b = curBook && Store.item(curBook); if (b && !b.deleted) newPageIn(b.id); else openBookEdit(null); } },
+    renderScreen(sc, view) { view.onclick = null; if (sc === 'work') renderWork(view); else if (sc === 'book') renderBooks(view); else if (sc === 'rules') renderRules(view); },
+    addOnScreen(sc) { if (sc === 'rules') { openRuleEdit(null); return; } if (sc === 'work') openWork(null); else if (sc === 'book') { const b = curBook && Store.item(curBook); if (b && !b.deleted) newPageIn(b.id); else openBookEdit(null); } },
     openOccurrence, toggleOccurrence, onItemSaved, openWork, meetingFor, openPage,
     openRules, openAttend, openIO
   };
