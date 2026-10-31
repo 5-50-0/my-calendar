@@ -203,7 +203,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.0.3<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
   }
 
   // ---------- 이동 ----------
@@ -534,7 +534,7 @@
 
   // ---------- 앱 설치·업데이트 ----------
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js').then(reg => {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
       const ask = w => { $('#update-bar').hidden = false; $('#btn-update').onclick = () => w.postMessage('skipWaiting'); };
       if (reg.waiting) ask(reg.waiting);
       reg.addEventListener('updatefound', () => {
