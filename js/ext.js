@@ -131,7 +131,7 @@
         + `<label class="check"><input type="checkbox" id="r-lunar" ${r.lunar ? 'checked' : ''}>음력 날짜 (음력 생일 등)</label>`;
       return `<div class="m-head"><h2>${isNew ? '정기업무 추가' : '정기업무 수정'}</h2>${A.closeBtn}</div>`
         + `<div class="field"><span class="lbl">종류</span><div class="pills">${pill(r.itemKind === 'event', 'data-ik="event"', '일정')}${pill(r.itemKind === 'todo', 'data-ik="todo"', '할 일 (체크형)')}</div></div>`
-        + `<div class="field"><label for="r-title">제목</label><input type="text" id="r-title" value="${A.esc(r.title)}" placeholder="예) 10:00 토양 월간 점검 / 엄마 생일" autocomplete="off"></div>`
+        + `<div class="field"><label for="r-title">제목</label><input type="text" id="r-title" value="${A.esc(r.title)}" autocomplete="off"></div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const col = cats[c].color; return pill(r.cat === c, `data-cat="${c}"`, `<span class="dot" style="background:${col}"></span>${A.esc(cats[c].name)}`, `background:${col};color:${A.textOn(col)}`); }).join('')}</div></div>`
         + `<div class="field"><label for="r-sub">세부 분류</label><select id="r-sub"><option value="">없음</option>${subs.map(s => `<option ${s === r.sub ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div>`
         + `<div class="field"><span class="lbl">반복</span><div class="pills">${[['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']].map(([f, l]) => pill(r.freq === f, `data-freq="${f}"`, l)).join('')}</div></div>`
@@ -253,12 +253,12 @@
     const uidS = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const w = isNew ? { kind: 'work', title: '', start: A.todayKey(), end: '', status: '진행', cat: 'c', steps: [{ id: uidS(), title: '', date: '', done: false }], logs: [], result: '' } : JSON.parse(JSON.stringify(Store.item(id)));
     const draw = () => `<div class="m-head"><h2>${isNew ? '새 업무' : '업무'}</h2>${A.closeBtn}</div>`
-      + `<div class="field"><label for="w-title">업무명</label><input type="text" id="w-title" value="${A.esc(w.title)}" placeholder="예) 2026 협력업체 평가" autocomplete="off"></div>`
+      + `<div class="field"><label for="w-title">업무명</label><input type="text" id="w-title" value="${A.esc(w.title)}" autocomplete="off"></div>`
       + `<div class="row2"><div class="field"><label for="w-start">시작</label><input type="date" id="w-start" value="${w.start || ''}"></div><div class="field"><label for="w-end">마감 (선택)</label><input type="date" id="w-end" value="${w.end || ''}"></div></div>`
       + `<div class="field"><span class="lbl">상태</span><div class="pills">${STATUS.map(s => pill((w.status || '진행') === s, `data-st="${s}"`, s)).join('')}</div></div>`
       + `<div class="field"><span class="lbl">단계 (순서대로 · 지금 단계만 달력의 할 일로 올라가요)</span><div class="steps">${(w.steps || []).map((s, i) => `<div class="step ${s.done ? 'done' : ''}"><button class="ck ${s.done ? 'on' : ''}" data-ck="${i}" aria-label="완료">${s.done ? '✓' : i + 1}</button><input type="text" class="st-title" data-i="${i}" value="${A.esc(s.title)}" placeholder="할 일"><input type="date" class="st-date" data-i="${i}" value="${s.date || ''}" aria-label="날짜 (선택)"><span class="st-btns"><button data-up="${i}" aria-label="위로">↑</button><button data-dn="${i}" aria-label="아래로">↓</button><button data-rm="${i}" aria-label="삭제">✕</button></span>${s.done && s.doneDate ? `<span class="st-done">${s.doneDate.slice(5).replace('-', '/')} 완료</span>` : ''}</div>`).join('')}</div><button class="btn" data-addstep>+ 단계 추가</button><span class="hint">날짜를 비워두면 앞 단계를 끝낸 날 할 일로 올라와요.</span></div>`
-      + `<div class="field"><span class="lbl">진행 기록</span><div class="logs">${(w.logs || []).slice().sort((a, b) => b.date.localeCompare(a.date)).map(l => `<div class="log"><span class="ld">${l.date.slice(5).replace('-', '/')}</span><span class="lx">${A.esc(l.text)}</span><button data-rmlog="${l.id}" aria-label="삭제">✕</button></div>`).join('') || '<div class="empty">기록이 없어요</div>'}</div><div class="add-sub"><input type="date" id="w-ldate" value="${A.todayKey()}" style="flex:none;width:150px"><input type="text" id="w-ltext" placeholder="예) 광주 평가 완료, 지적 2건"><button data-addlog>추가</button></div></div>`
-      + `<div class="field"><label for="w-result">성과</label><textarea id="w-result" placeholder="예) 10개 업체 평가, 지적 15건 개선 완료">${A.esc(w.result || '')}</textarea></div>`
+      + `<div class="field"><span class="lbl">진행 기록</span><div class="logs">${(w.logs || []).slice().sort((a, b) => b.date.localeCompare(a.date)).map(l => `<div class="log"><span class="ld">${l.date.slice(5).replace('-', '/')}</span><span class="lx">${A.esc(l.text)}</span><button data-rmlog="${l.id}" aria-label="삭제">✕</button></div>`).join('') || '<div class="empty">기록이 없어요</div>'}</div><div class="add-sub"><input type="date" id="w-ldate" value="${A.todayKey()}" style="flex:none;width:150px"><input type="text" id="w-ltext"><button data-addlog>추가</button></div></div>`
+      + `<div class="field"><label for="w-result">성과</label><textarea id="w-result">${A.esc(w.result || '')}</textarea></div>`
       + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
     const read = m => {
       w.title = $('#w-title', m).value.trim(); w.start = $('#w-start', m).value; w.end = $('#w-end', m).value;
@@ -356,7 +356,7 @@
       const uses = leaveUses(attYear);
       const used = uses.reduce((a, u) => a + u.amt, 0);
       body = `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
-        + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}" placeholder="예) 15"></div>`
+        + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}"></div>`
         + `<div class="sec-title">사용 내역</div><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty" style="padding:12px 4px">사용 내역이 없어요</div>'}</div>`
         + `<p class="hint" style="line-height:1.6;margin-top:14px">근태 분류에서 세부 분류가 '연차'이거나 제목에 연차·반차(0.5)·반반차(0.25)가 들어간 일정을 세요. 주말·공휴일은 빼고 계산해요.</p>`;
     } else {
@@ -458,7 +458,7 @@
     const isNew = !id;
     const b = isNew ? { kind: 'book', title: '', sub: '', color: COVERS[byKind('book').length % COVERS.length], pinHash: '' } : JSON.parse(JSON.stringify(Store.item(id)));
     const draw = () => `<div class="m-head"><h2>${isNew ? '새 미니북' : '책 설정'}</h2>${A.closeBtn}</div>`
-      + `<div class="field"><label for="b-title">제목</label><input type="text" id="b-title" value="${A.esc(b.title)}" placeholder="예) 연봉 기록 / 회의록 / 2027 목표"></div>`
+      + `<div class="field"><label for="b-title">제목</label><input type="text" id="b-title" value="${A.esc(b.title)}"></div>`
       + `<div class="field"><label for="b-sub">설명 (선택)</label><input type="text" id="b-sub" value="${A.esc(b.sub || '')}"></div>`
       + `<div class="field"><span class="lbl">표지 색</span><div class="pills">${COVERS.map(c => `<button class="swatch ${b.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="색 ${c}"></button>`).join('')}</div></div>`
       + `<div class="field"><label for="b-pin">잠금 번호 4자리 ${b.pinHash ? '(설정됨 · 바꾸려면 새로 입력, 빈칸으로 두면 유지)' : '(선택)'}</label><input type="password" id="b-pin" inputmode="numeric" maxlength="4" autocomplete="new-password">${b.pinHash ? '<label class="check"><input type="checkbox" id="b-nopin">잠금 해제하기</label>' : ''}<span class="hint">연봉처럼 민감한 내용은 잠가두세요. 번호를 잊으면 열 수 없어요.</span></div>`
@@ -523,7 +523,7 @@
     };
     const draw = () => `<div class="m-head"><h2>회의록</h2>${A.closeBtn}</div>`
       + `<div class="row2"><div class="field"><label for="p-date">날짜</label><input type="date" id="p-date" value="${p.date}"></div><div class="field"><label for="p-place">회의 장소</label><input type="text" id="p-place" value="${A.esc(p.place)}"></div></div>`
-      + `<div class="field"><label for="p-people">참석자 (부서)</label><input type="text" id="p-people" value="${A.esc(p.people)}" placeholder="예) 발전2팀 김OO, 안전환경팀"></div>`
+      + `<div class="field"><label for="p-people">참석자 (부서)</label><input type="text" id="p-people" value="${A.esc(p.people)}"></div>`
       + `<div class="field"><label for="p-topic">회의 주제</label><input type="text" id="p-topic" value="${A.esc(p.topic)}"></div>`
       + `<div class="field"><label for="p-item">연결할 일정 (그 날짜의 일정)</label><select id="p-item">${evOpts()}</select><span class="hint">연결하면 달력에서 그 일정을 눌렀을 때 회의록으로 갈지 물어봐요.</span></div>`
       + `<div class="field"><label for="p-body">내용</label><textarea id="p-body" style="min-height:160px">${A.esc(p.body)}</textarea></div>`
@@ -600,8 +600,8 @@
       }
       grid += '</div>';
       return `<div class="m-head"><h2>해빗트래커</h2>${A.closeBtn}</div>`
-        + `<div class="row2"><div class="field"><label for="h-title">이름</label><input type="text" id="h-title" value="${A.esc(p.title)}" placeholder="예) 올해 여행 / 대정비 / 운동"></div><div class="field" style="flex:0 0 110px"><label for="h-year">연도</label><input type="number" id="h-year" value="${p.year}"></div></div>`
-        + `<div class="field"><span class="lbl">달력에서 자동으로 모으기 (선택)</span><div class="row2"><select id="h-cat"><option value="">분류 전체</option>${['k', 'c', 'p'].map(c => `<option value="${c}" ${p.cat === c ? 'selected' : ''}>${A.esc(cats[c].name)}</option>`).join('')}</select><select id="h-sub"><option value="">세부 전체</option>${(p.cat ? cats[p.cat].subs : []).map(s => `<option ${p.sub === s ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div><input type="text" id="h-word" value="${A.esc(p.word || '')}" placeholder="제목에 들어간 단어 (예: 대정비, PT)" style="margin-top:8px"><span class="hint">조건에 맞는 일정이 있는 날은 분류 색으로 칠해져요. 칸을 눌러 직접 체크할 수도 있어요.</span></div>`
+        + `<div class="row2"><div class="field"><label for="h-title">이름</label><input type="text" id="h-title" value="${A.esc(p.title)}"></div><div class="field" style="flex:0 0 110px"><label for="h-year">연도</label><input type="number" id="h-year" value="${p.year}"></div></div>`
+        + `<div class="field"><span class="lbl">달력에서 자동으로 모으기 (선택)</span><div class="row2"><select id="h-cat"><option value="">분류 전체</option>${['k', 'c', 'p'].map(c => `<option value="${c}" ${p.cat === c ? 'selected' : ''}>${A.esc(cats[c].name)}</option>`).join('')}</select><select id="h-sub"><option value="">세부 전체</option>${(p.cat ? cats[p.cat].subs : []).map(s => `<option ${p.sub === s ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div><input type="text" id="h-word" value="${A.esc(p.word || '')}" placeholder="제목에 들어간 단어" style="margin-top:8px"><span class="hint">조건에 맞는 일정이 있는 날은 분류 색으로 칠해져요. 칸을 눌러 직접 체크할 수도 있어요.</span></div>`
         + `<div class="hcount">${p.year}년 · <strong>${total}일</strong></div>${grid}` + pageActions(isNew);
     };
     const read = m => { p.title = $('#h-title', m).value; p.year = Number($('#h-year', m).value) || p.year; p.cat = $('#h-cat', m).value; p.sub = $('#h-sub', m).value; p.word = $('#h-word', m).value.trim(); };
@@ -837,7 +837,7 @@
         + `<div class="guide"><strong>TimeBlocks 일정 옮기는 법</strong><ol><li>TimeBlocks에서 구글 캘린더를 연동해요.</li><li>PC에서 구글 캘린더 → 설정 → 가져오기/내보내기 → <b>내보내기</b>로 받은 파일(.zip)을 풀어요.</li><li>안에 있는 <b>.ics</b> 파일을 아래에서 고르면 돼요.</li></ol></div>`
         + `<div class="field"><label for="io-cat">가져온 일정의 분류</label>${catSel('io-cat')}<span class="hint">가져온 뒤 일정마다 분류를 바꿀 수 있어요. 같은 파일을 두 번 가져와도 겹치지 않아요.</span></div>`
         + `<div class="field"><label for="io-file">.ics 파일</label><input type="file" id="io-file" accept=".ics,text/calendar"></div>`
-        + `<div class="field" style="margin-top:22px"><label for="io-text">텍스트로 붙여넣기 (몇 개만 옮길 때)</label><textarea id="io-text" placeholder="한 줄에 하나씩&#10;2026-11-05 14:00 방지시설 점검&#10;11/12 BCK 업무협의"></textarea><div class="row2"><select id="io-tkind"><option value="event">일정으로</option><option value="todo">할 일로</option></select>${catSel('io-tcat')}</div><button class="btn primary" data-intext style="margin-top:8px">붙여넣은 내용 가져오기</button></div>`;
+        + `<div class="field" style="margin-top:22px"><label for="io-text">텍스트로 붙여넣기 (몇 개만 옮길 때)</label><span class="hint">한 줄에 하나씩, 날짜(2026-11-05 또는 11/5) 뒤에 제목</span><textarea id="io-text"></textarea><div class="row2"><select id="io-tkind"><option value="event">일정으로</option><option value="todo">할 일로</option></select>${catSel('io-tcat')}</div><button class="btn primary" data-intext style="margin-top:8px">붙여넣은 내용 가져오기</button></div>`;
       return head
         + `<div class="row2"><div class="field"><label for="ex-s">시작</label><input type="date" id="ex-s" value="${y}-01-01"></div><div class="field"><label for="ex-e">끝</label><input type="date" id="ex-e" value="${y}-12-31"></div></div>`
         + `<div class="field"><span class="lbl">포함할 분류</span><div class="checks">${['k', 'c', 'p'].map(c => `<label class="check"><input type="checkbox" class="ex-c" value="${c}" checked>${A.esc(S().cats[c].name)}</label>`).join('')}<label class="check"><input type="checkbox" class="ex-c" value="todo" checked>할 일</label></div></div>`

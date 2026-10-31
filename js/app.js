@@ -212,7 +212,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.2.3<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.2.4<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -354,12 +354,12 @@
       return `<div class="m-head"><h2>${isNew ? (isTodo ? '새 할 일' : '새 일정') : (isTodo ? '할 일' : '일정')}</h2>${closeBtn}</div>`
         + (!isNew && isTodo ? `<button class="btn done-btn ${it.done ? '' : 'primary'}" data-toggle-done>${it.done ? '완료 취소' : '완료로 표시'}</button>` : '')
         + `<div class="field"><span class="lbl">종류</span><div class="pills"><button class="pill ${!isTodo ? 'on' : ''}" data-kind="event" style="${!isTodo ? 'background:var(--accent);color:var(--accent-text)' : ''}">일정</button><button class="pill ${isTodo ? 'on' : ''}" data-kind="todo" style="${isTodo ? `background:${S.todoColor};color:${textOn(S.todoColor)}` : ''}">할 일</button></div></div>`
-        + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" placeholder="예) 14:00 방지시설 점검" autocomplete="off"><span class="hint">맨 앞에 시간을 쓰면 시간 순으로 정렬돼요.</span></div>`
+        + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" autocomplete="off"><span class="hint">맨 앞에 시간을 쓰면 시간 순으로 정렬돼요.</span></div>`
         + `<div class="row2"><div class="field"><label for="f-date">${isTodo ? '날짜' : '시작일'}</label><input type="date" id="f-date" value="${it.date}"></div>`
         + (isTodo ? '' : `<div class="field"><label for="f-end">종료일 (선택)</label><input type="date" id="f-end" value="${it.endDate || ''}"></div>`) + `</div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const on = it.cat === c; const col = S.cats[c].color; return `<button class="pill ${on ? 'on' : ''}" data-cat="${c}" style="${on ? `background:${col};color:${textOn(col)}` : ''}"><span class="dot" style="background:${col}"></span>${esc(S.cats[c].name)}</button>`; }).join('')}</div></div>`
         + `<div class="field"><label for="f-sub">세부 분류</label><select id="f-sub"><option value="">없음</option>${subs.map(s => `<option ${s === it.sub ? 'selected' : ''}>${esc(s)}</option>`).join('')}${it.sub && !subs.includes(it.sub) ? `<option selected>${esc(it.sub)}</option>` : ''}</select></div>`
-        + `<div class="field"><label for="f-memo">세부 메모</label><textarea id="f-memo" placeholder="위클리에서 일정 아래에 보여요">${esc(it.memo || '')}</textarea></div>`
+        + `<div class="field"><label for="f-memo">세부 메모</label><textarea id="f-memo">${esc(it.memo || '')}</textarea></div>`
         + (it.workId && Store.item(it.workId) ? `<div class="field"><span class="lbl">업무</span><button class="btn" data-openwork>${esc(Store.item(it.workId).title)} 열기</button></div>` : '')
         + (!isNew && !isTodo ? `<div class="field"><span class="lbl">회의록</span><button class="btn" data-meeting>${it.noteId && Store.item(it.noteId) && !Store.item(it.noteId).deleted ? '연결된 회의록 열기' : '이 일정으로 회의록 쓰기'}</button></div>` : '')
         + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
