@@ -51,6 +51,7 @@ button { cursor: pointer; }
 #app { height: 100dvh; display: flex; flex-direction: column; }
 
 /* 상단 */
+.today-btn span { min-width: 26px; height: 26px; padding: 0 3px; border: 1.8px solid currentColor; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; line-height: 1; }
 .top { display: flex; align-items: center; gap: 2px; padding: 8px 8px 6px; padding-top: calc(10px + env(safe-area-inset-top)); flex: none; }
 .ib { width: 44px; height: 44px; border: 0; background: transparent; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); padding: 0; flex: none; }
 .ib:hover { background: var(--line-soft); }

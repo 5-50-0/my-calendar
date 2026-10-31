@@ -105,6 +105,7 @@
     $('#ico-month').style.display = state.view === 'week' ? '' : 'none';
     $('#btn-view').setAttribute('aria-label', state.view === 'month' ? '주간 보기' : '월간 보기');
     document.body.dataset.screen = state.screen;
+    $('#today-num').textContent = new Date().getDate();
     $$('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === state.screen));
     if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; renderDrawerFoot(); return; }
     view.onclick = null;
@@ -211,7 +212,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.2.0<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.2.1<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
