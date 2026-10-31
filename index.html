@@ -32,6 +32,12 @@
     <main id="view" class="view"></main>
     <aside id="side" class="side"></aside>
   </div>
+
+  <nav class="tabbar" aria-label="화면 이동">
+    <button class="tab on" data-tab="calendar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>달력</button>
+    <button class="tab" data-tab="업무"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>업무</button>
+    <button class="tab" data-tab="미니북"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg>미니북</button>
+  </nav>
 </div>
 
 <!-- 왼쪽 메뉴 -->
@@ -40,11 +46,6 @@
   <div class="drawer-head">
     <div class="app-name">내 일정</div>
     <div class="app-sub" id="sync-state"></div>
-  </div>
-  <div class="drawer-group">
-    <button class="drawer-item" data-go="calendar"><span class="di-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>달력</button>
-    <button class="drawer-item" data-soon="업무"><span class="di-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></span>업무<span class="soon">2차</span></button>
-    <button class="drawer-item" data-soon="미니북"><span class="di-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/></svg></span>미니북<span class="soon">3차</span></button>
   </div>
   <div class="drawer-label">설정</div>
   <div class="drawer-group">

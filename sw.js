@@ -1,6 +1,6 @@
 // 앱 파일 캐시 (오프라인 실행 + 업데이트 알림)
 // 앱을 고칠 때마다 VERSION을 올리면, 열려 있는 앱에 "새 버전이 있어요"가 뜬다.
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 const CACHE = 'mycal-' + VERSION;
 const FILES = [
   './', 'index.html', 'css/app.css', 'js/lunar-data.js', 'js/holidays.js', 'js/store.js', 'js/app.js',

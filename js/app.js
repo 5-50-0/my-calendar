@@ -475,9 +475,15 @@
   drawer.addEventListener('click', e => {
     const b = e.target.closest('.drawer-item'); if (!b) return;
     closeDrawer();
-    if (b.dataset.go === 'calendar') { showMonth(); return; }
     if (b.dataset.soon) { toast(`${b.dataset.soon} 기능은 다음 제작 단계에서 추가돼요`); return; }
     ({ cats: openCats, theme: openTheme, backup: openBackup })[b.dataset.open]();
+  });
+
+  // ---------- 하단 탭 ----------
+  $('.tabbar').addEventListener('click', e => {
+    const t = e.target.closest('[data-tab]'); if (!t) return;
+    if (t.dataset.tab === 'calendar') { showMonth(); return; }
+    toast(`${t.dataset.tab} 화면은 다음 제작 단계에서 추가돼요`);
   });
 
   // ---------- 상단 버튼 ----------
