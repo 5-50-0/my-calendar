@@ -15,6 +15,7 @@
   --card: #ffffff;
   --shadow: 0 8px 30px rgba(20, 24, 33, .14);
   --seg: #f1f3f6;
+  --rule: rgba(29, 35, 48, .07);
   --font: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 [data-theme="dark"] {
@@ -34,6 +35,7 @@
   --card: #1d2027;
   --shadow: 0 8px 30px rgba(0, 0, 0, .5);
   --seg: #23262e;
+  --rule: rgba(255, 255, 255, .07);
 }
 
 * { box-sizing: border-box; }
@@ -69,8 +71,12 @@ button { cursor: pointer; }
 .month { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--cols); touch-action: pan-y; }
 .wkno { border: 0; border-bottom: 1px solid var(--line-soft); background: var(--bg-soft); color: var(--faint); font-size: 10px; padding: 6px 0 0; display: flex; justify-content: center; align-items: flex-start; }
 .wkno:hover { color: var(--text); background: var(--line-soft); }
-.day { border-bottom: 1px solid var(--line-soft); border-left: 1px solid var(--line-soft); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
-.day.out { background: var(--bg-out); }
+.day { border-bottom: 1px solid var(--line-soft); border-left: 1px solid var(--line-soft); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+  --rule-h: 20px; --rule-top: 27px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-h) - 1px), var(--rule) calc(var(--rule-h) - 1px), var(--rule) var(--rule-h));
+  background-position: 0 var(--rule-top); background-repeat: repeat-x; background-size: 100% calc(100% - var(--rule-top)); background-origin: border-box; }
+.wcol { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px); background-position: 0 38px; background-repeat: no-repeat; background-size: 100% calc(100% - 38px); }
+.day.out { background-color: var(--bg-out); }
 .day.out > * { opacity: .45; }
 .dh { display: flex; align-items: center; gap: 4px; padding: 1px 2px 2px; min-height: 22px; flex-wrap: nowrap; overflow: hidden; }
 .dn { font-size: 13px; font-weight: 600; color: var(--text); min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; flex: none; }
@@ -105,7 +111,7 @@ button { cursor: pointer; }
 .memo-box label { font-size: 12px; font-weight: 700; color: var(--muted); }
 .memo-box textarea { border: 0; background: transparent; resize: none; min-height: 44px; font-size: 14px; line-height: 1.55; outline: none; padding: 0; }
 .wcols { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.wcol { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.wcol { background-color: var(--bg-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .wkend { display: flex; flex-direction: column; gap: 10px; }
 .wdh { display: flex; align-items: baseline; gap: 6px; padding: 0 2px 4px; border-bottom: 1px solid var(--line); margin-bottom: 2px; cursor: pointer; }
 .wdh .n { font-size: 18px; font-weight: 700; }
@@ -237,7 +243,7 @@ button { cursor: pointer; }
   .chip { font-size: 12px; padding: 3px 6px; min-height: 21px; }
   .dn { font-size: 13.5px; }
   .hol { font-size: 11px; }
-  .day { padding: 4px 4px; }
+  .day { padding: 4px 4px; --rule-h: 23px; --rule-top: 29px; }
   .mini { display: block; }
   .week { padding: 0 18px 24px; }
   .wcols { grid-template-columns: repeat(6, minmax(0, 1fr)); }
