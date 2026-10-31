@@ -22,6 +22,7 @@
   // ---------- 상태 ----------
   const now = new Date();
   const state = {
+    screen: 'calendar',  // calendar | work | book
     view: 'month',
     year: now.getFullYear(),
     month: now.getMonth(),          // 0~11
@@ -55,6 +56,7 @@
     const push = (k, e) => { if (k >= start && k <= end) (map[k] = map[k] || []).push(e); };
     const today = todayKey();
     Store.items().forEach(it => {
+      if (it.kind !== 'todo' && it.kind !== 'event') return;
       if (it.kind === 'todo') {
         if (it.done) push(it.doneDate || it.date, { it, late: 0 });
         else if (it.date >= today) push(it.date, { it, late: 0 });
@@ -67,6 +69,7 @@
         while (k <= stop) { push(k, { it, late: 0 }); k = addDays(k, 1); }
       }
     });
+    if (window.Ext) Ext.ruleEntries(start, end).forEach(([k, e]) => push(k, e));
     Object.values(map).forEach(list => list.sort(order));
     return map;
   }
@@ -101,6 +104,10 @@
     $('#ico-week').style.display = state.view === 'month' ? '' : 'none';
     $('#ico-month').style.display = state.view === 'week' ? '' : 'none';
     $('#btn-view').setAttribute('aria-label', state.view === 'month' ? '주간 보기' : '월간 보기');
+    document.body.dataset.screen = state.screen;
+    $$('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === state.screen));
+    if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; renderDrawerFoot(); return; }
+    view.onclick = null;
     if (state.view === 'month') renderMonth(); else renderWeek();
     renderSide();
     renderDrawerFoot();
@@ -204,7 +211,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.1.0<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.2.0<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -305,6 +312,19 @@
     toast.timer = setTimeout(() => { t.hidden = true; }, 4000);
   }
 
+  // 칩을 눌렀을 때: 정기업무 → 해당 회차, 회의록 연결 → 이동 여부 묻기
+  function openChip(id) {
+    if (id.startsWith('r:')) { Ext.openOccurrence(id); return; }
+    const it = Store.item(id);
+    if (it && it.noteId && Store.item(it.noteId) && !Store.item(it.noteId).deleted) {
+      openModal(`<div class="m-head"><h2>연결된 회의록</h2>${closeBtn}</div><p style="margin:0 0 18px;line-height:1.6">이 일정에 연결된 회의록이 있어요. 회의록으로 이동할까요?</p><div class="m-actions"><button class="btn" data-no style="flex:1">아니오</button><button class="btn primary" data-yes>예</button></div>`, m => {
+        m.onclick = e => { if (e.target.closest('[data-yes]')) Ext.openPage(it.noteId); else if (e.target.closest('[data-no]')) openItem(id); };
+      });
+      return;
+    }
+    openItem(id);
+  }
+
   // 하루 보기
   function openDay(k) {
     const list = layout(k, k)[k] || [];
@@ -317,7 +337,7 @@
       m.onclick = e => {
         const n = e.target.closest('[data-new]'); if (n) { openItem(null, { kind: n.dataset.new, date: k }); return; }
         const w = e.target.closest('[data-weekof]'); if (w) { closeModal(); showWeek(mondayOf(k)); return; }
-        const c = e.target.closest('.chip[data-id]'); if (c) openItem(c.dataset.id);
+        const c = e.target.closest('.chip[data-id]'); if (c) openChip(c.dataset.id);
       };
     });
   }
@@ -339,6 +359,8 @@
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const on = it.cat === c; const col = S.cats[c].color; return `<button class="pill ${on ? 'on' : ''}" data-cat="${c}" style="${on ? `background:${col};color:${textOn(col)}` : ''}"><span class="dot" style="background:${col}"></span>${esc(S.cats[c].name)}</button>`; }).join('')}</div></div>`
         + `<div class="field"><label for="f-sub">세부 분류</label><select id="f-sub"><option value="">없음</option>${subs.map(s => `<option ${s === it.sub ? 'selected' : ''}>${esc(s)}</option>`).join('')}${it.sub && !subs.includes(it.sub) ? `<option selected>${esc(it.sub)}</option>` : ''}</select></div>`
         + `<div class="field"><label for="f-memo">세부 메모</label><textarea id="f-memo" placeholder="위클리에서 일정 아래에 보여요">${esc(it.memo || '')}</textarea></div>`
+        + (it.workId && Store.item(it.workId) ? `<div class="field"><span class="lbl">업무</span><button class="btn" data-openwork>${esc(Store.item(it.workId).title)} 열기</button></div>` : '')
+        + (!isNew && !isTodo ? `<div class="field"><span class="lbl">회의록</span><button class="btn" data-meeting>${it.noteId && Store.item(it.noteId) && !Store.item(it.noteId).deleted ? '연결된 회의록 열기' : '이 일정으로 회의록 쓰기'}</button></div>` : '')
         + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
     };
     const readForm = m => {
@@ -358,14 +380,16 @@
         if (e.target.closest('[data-toggle-done]')) {
           readForm(m);
           it.done = !it.done; it.doneDate = it.done ? todayKey() : '';
-          Store.save(it); closeModal(); render();
+          Store.save(it); if (window.Ext) Ext.onItemSaved(it); closeModal(); render();
           toast(it.done ? '완료했어요' : '완료를 취소했어요');
           return;
         }
+        if (e.target.closest('[data-openwork]')) { Ext.openWork(it.workId); return; }
+        if (e.target.closest('[data-meeting]')) { readForm(m); Store.save(it); Ext.meetingFor(it.id); return; }
         if (e.target.closest('[data-save]')) {
           readForm(m);
           if (!it.title) { $('#f-title', m).focus(); return; }
-          Store.save(it); closeModal(); render();
+          Store.save(it); if (window.Ext) Ext.onItemSaved(it); closeModal(); render();
           return;
         }
         if (e.target.closest('[data-del]')) {
@@ -378,11 +402,12 @@
   }
 
   function toggleDone(id) {
+    if (id.startsWith('r:')) { Ext.toggleOccurrence(id); render(); return; }
     const it = Store.item(id);
     if (!it || it.kind !== 'todo') return;
     it.done = !it.done; it.doneDate = it.done ? todayKey() : '';
-    Store.save(it); render();
-    toast(it.done ? '완료했어요' : '완료를 취소했어요', '되돌리기', () => { it.done = !it.done; it.doneDate = it.done ? todayKey() : ''; Store.save(it); render(); });
+    Store.save(it); if (window.Ext) Ext.onItemSaved(it); render();
+    toast(it.done ? '완료했어요' : '완료를 취소했어요');
   }
 
   // 연·월 이동
@@ -523,17 +548,21 @@
   drawer.addEventListener('click', e => {
     const b = e.target.closest('.drawer-item'); if (!b) return;
     closeDrawer();
-    if (b.dataset.tab) { if (b.dataset.tab === 'calendar') showMonth(); else toast(`${b.dataset.tab} 화면은 다음 제작 단계에서 추가돼요`); return; }
-    if (b.dataset.soon) { toast(`${b.dataset.soon} 기능은 다음 제작 단계에서 추가돼요`); return; }
-    ({ cats: openCats, theme: openTheme, backup: openBackup, sync: openSync })[b.dataset.open]();
+    if (b.dataset.tab) { setScreen(b.dataset.tab); return; }
+    const ext = window.Ext || {};
+    ({ cats: openCats, theme: openTheme, backup: openBackup, sync: openSync, rules: ext.openRules, attend: ext.openAttend, io: ext.openIO })[b.dataset.open]();
   });
 
   // ---------- 하단 탭 ----------
   $('.tabbar').addEventListener('click', e => {
     const t = e.target.closest('[data-tab]'); if (!t) return;
-    if (t.dataset.tab === 'calendar') { showMonth(); return; }
-    toast(`${t.dataset.tab} 화면은 다음 제작 단계에서 추가돼요`);
+    setScreen(t.dataset.tab);
   });
+  function setScreen(sc) {
+    state.screen = sc;
+    if (sc === 'calendar') { showMonth(); return; }
+    render();
+  }
 
   // ---------- 상단 버튼 ----------
   $('#btn-prev').onclick = () => go(-1);
@@ -546,14 +575,15 @@
     const inMonth = parse(t).getFullYear() === state.year && parse(t).getMonth() === state.month;
     showWeek(inMonth ? mondayOf(t) : mondayOf(keyOf(new Date(state.year, state.month, 1))));
   };
-  $('#btn-add').onclick = () => openItem(null, {});
+  $('#btn-add').onclick = () => { if (state.screen === 'calendar') openItem(null, {}); else Ext.addOnScreen(state.screen); };
 
   // ---------- 달력 클릭·길게 누르기·밀기 ----------
   let pressTimer = null, pressed = false, sx = 0, sy = 0, st = 0;
   view.addEventListener('pointerdown', e => {
     const c = e.target.closest('.chip[data-id]');
     pressed = false;
-    if (c && Store.item(c.dataset.id) && Store.item(c.dataset.id).kind === 'todo') {
+    const isTodoChip = c && (c.dataset.id.startsWith('r:') ? c.classList.contains('todo') : (Store.item(c.dataset.id) && Store.item(c.dataset.id).kind === 'todo'));
+    if (isTodoChip) {
       pressTimer = setTimeout(() => { pressed = true; if (navigator.vibrate) navigator.vibrate(20); toggleDone(c.dataset.id); }, 550);
     }
   });
@@ -565,14 +595,15 @@
     if (mini) { const wt = weekTitle(state.weekStart); const cur = state.miniYM || { y: wt.y, m: wt.m - 1 }; const d = new Date(cur.y, cur.m + Number(mini.dataset.mini), 1); state.miniYM = { y: d.getFullYear(), m: d.getMonth() }; renderWeek(); return; }
     const gw = e.target.closest('[data-goweek]'); if (gw) { showWeek(gw.dataset.goweek); return; }
     const wk = e.target.closest('[data-week]'); if (wk) { showWeek(wk.dataset.week); return; }
-    const c = e.target.closest('.chip[data-id]'); if (c) { openItem(c.dataset.id); return; }
+    if (state.screen !== 'calendar') return;
+    const c = e.target.closest('.chip[data-id]'); if (c) { openChip(c.dataset.id); return; }
     const d = e.target.closest('[data-day]'); if (d) openDay(d.dataset.day);
   });
-  $('#side').addEventListener('click', e => { const c = e.target.closest('.chip[data-id]'); if (c) openItem(c.dataset.id); });
+  $('#side').addEventListener('click', e => { const c = e.target.closest('.chip[data-id]'); if (c) openChip(c.dataset.id); });
   view.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
   view.addEventListener('touchend', e => {
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-    if (Math.abs(dx) > 60 && Math.abs(dy) < 50 && Date.now() - st < 600 && !e.target.closest('textarea')) { clearTimeout(pressTimer); go(dx < 0 ? 1 : -1); }
+    if (state.screen === 'calendar' && Math.abs(dx) > 60 && Math.abs(dy) < 50 && Date.now() - st < 600 && !e.target.closest('textarea')) { clearTimeout(pressTimer); go(dx < 0 ? 1 : -1); }
   }, { passive: true });
 
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 120); });
@@ -596,6 +627,8 @@
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
   }
 
+  window.App = { state, render, openModal, closeModal, closeBtn, toast, esc, pad, keyOf, parse, addDays, diffDays, todayKey, mondayOf, labelDate, textOn, colorOf, chipHTML, layout, openItem, openChip, setScreen, splitTitle, timeOf, WD };
+  if (window.Ext) Ext.init(App);
   render();
 
   // ---------- 동기화 시작 ----------
