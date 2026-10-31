@@ -166,6 +166,7 @@ button { cursor: pointer; }
 .modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); }
 .m-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .m-head h2 { font-size: 18px; margin: 0; flex: 1; }
+.m-head-mini { justify-content: flex-end; margin: -8px -8px 2px 0; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .field > label, .field > .lbl { font-size: 12.5px; font-weight: 700; color: var(--muted); }
 .field input[type=text], .field input[type=date], .field input[type=number], .field input[type=password], .field textarea, .field select { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; font-size: 15px; outline: none; }

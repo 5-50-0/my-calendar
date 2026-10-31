@@ -212,7 +212,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.2.4<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.2.5<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -333,7 +333,7 @@
     openModal(`<div class="m-head"><h2>${labelDate(k)}</h2>${closeBtn}</div>`
       + (hol ? `<div class="hol-line">${esc(hol.join(' · '))}</div>` : '')
       + `<div class="day-list">${list.length ? list.map(e => `<div>${chipHTML(e)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">등록된 일정이 없어요</div>'}</div>`
-      + `<div class="m-actions"><button class="btn primary" data-new="event">+ 일정</button><button class="btn primary" data-new="todo">+ 할 일</button></div>`
+      + `<div class="m-actions"><button class="btn primary" data-new="event">+ 추가</button></div>`
       + `<div class="m-actions"><button class="btn" style="flex:1" data-weekof="${k}">이 주 위클리 보기</button></div>`, m => {
       m.onclick = e => {
         const n = e.target.closest('[data-new]'); if (n) { openItem(null, { kind: n.dataset.new, date: k }); return; }
@@ -351,10 +351,10 @@
     const draw = () => {
       const isTodo = it.kind === 'todo';
       const subs = S.cats[it.cat].subs;
-      return `<div class="m-head"><h2>${isNew ? (isTodo ? '새 할 일' : '새 일정') : (isTodo ? '할 일' : '일정')}</h2>${closeBtn}</div>`
+      return `<div class="m-head m-head-mini">${closeBtn}</div>`
         + (!isNew && isTodo ? `<button class="btn done-btn ${it.done ? '' : 'primary'}" data-toggle-done>${it.done ? '완료 취소' : '완료로 표시'}</button>` : '')
-        + `<div class="field"><span class="lbl">종류</span><div class="pills"><button class="pill ${!isTodo ? 'on' : ''}" data-kind="event" style="${!isTodo ? 'background:var(--accent);color:var(--accent-text)' : ''}">일정</button><button class="pill ${isTodo ? 'on' : ''}" data-kind="todo" style="${isTodo ? `background:${S.todoColor};color:${textOn(S.todoColor)}` : ''}">할 일</button></div></div>`
         + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" autocomplete="off"><span class="hint">맨 앞에 시간을 쓰면 시간 순으로 정렬돼요.</span></div>`
+        + `<div class="field"><span class="lbl">종류</span><div class="pills"><button class="pill ${!isTodo ? 'on' : ''}" data-kind="event" style="${!isTodo ? 'background:var(--accent);color:var(--accent-text)' : ''}">일정</button><button class="pill ${isTodo ? 'on' : ''}" data-kind="todo" style="${isTodo ? `background:${S.todoColor};color:${textOn(S.todoColor)}` : ''}">할 일</button></div></div>`
         + `<div class="row2"><div class="field"><label for="f-date">${isTodo ? '날짜' : '시작일'}</label><input type="date" id="f-date" value="${it.date}"></div>`
         + (isTodo ? '' : `<div class="field"><label for="f-end">종료일 (선택)</label><input type="date" id="f-end" value="${it.endDate || ''}"></div>`) + `</div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const on = it.cat === c; const col = S.cats[c].color; return `<button class="pill ${on ? 'on' : ''}" data-cat="${c}" style="${on ? `background:${col};color:${textOn(col)}` : ''}"><span class="dot" style="background:${col}"></span>${esc(S.cats[c].name)}</button>`; }).join('')}</div></div>`
@@ -598,7 +598,7 @@
     const wk = e.target.closest('[data-week]'); if (wk) { showWeek(wk.dataset.week); return; }
     if (state.screen !== 'calendar') return;
     const c = e.target.closest('.chip[data-id]'); if (c) { openChip(c.dataset.id); return; }
-    const d = e.target.closest('[data-day]'); if (d) openDay(d.dataset.day);
+    const d = e.target.closest('[data-day]'); if (d) openItem(null, { date: d.dataset.day });
   });
   $('#side').addEventListener('click', e => { const c = e.target.closest('.chip[data-id]'); if (c) openChip(c.dataset.id); });
   view.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
