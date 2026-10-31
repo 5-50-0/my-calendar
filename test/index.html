@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회사 PC 접속 테스트</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; background: #f4f5f7; color: #1d2330; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 48px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .sub { color: #5b6475; font-size: 14px; margin: 0 0 24px; line-height: 1.6; }
+  .card { background: #fff; border: 1px solid #e3e6eb; border-radius: 12px; padding: 16px 18px; margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start; }
+  .badge { flex: none; min-width: 64px; text-align: center; font-size: 13px; font-weight: 700; padding: 5px 8px; border-radius: 999px; background: #e9ebef; color: #4d5566; }
+  .ok { background: #dff3e4; color: #1e6b35; }
+  .bad { background: #fde2e1; color: #a1271f; }
+  .wait { background: #e9ebef; color: #4d5566; }
+  .name { font-weight: 700; font-size: 15px; }
+  .desc { font-size: 13px; color: #5b6475; margin-top: 4px; line-height: 1.55; }
+  .summary { margin-top: 20px; padding: 16px 18px; border-radius: 12px; background: #1d2330; color: #fff; font-size: 14px; line-height: 1.7; }
+  .meta { margin-top: 14px; font-size: 12px; color: #5b6475; }
+  button { margin-top: 14px; height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #c9ced6; background: #fff; font-size: 14px; font-family: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>회사 PC 접속 테스트</h1>
+  <p class="sub">일정 앱을 회사에서 쓸 수 있는지 확인하는 페이지예요. 자동으로 검사가 끝나면 이 화면을 캡처해서 보내주세요.</p>
+
+  <div class="card"><span class="badge ok">통과</span><div><div class="name">1. 이 페이지 열림</div><div class="desc">앱이 올라갈 주소(GitHub Pages)에 접속됩니다.</div></div></div>
+  <div class="card"><span class="badge wait" id="b-fb">검사 중</span><div><div class="name">2. 데이터 저장소 (Firebase)</div><div class="desc">일정을 폰·태블릿·PC가 같이 쓰는 저장소입니다.</div></div></div>
+  <div class="card"><span class="badge wait" id="b-sb">검사 중</span><div><div class="name">3. 예비 저장소 (Supabase)</div><div class="desc">2번이 막혔을 때 쓸 대안입니다.</div></div></div>
+  <div class="card"><span class="badge wait" id="b-ls">검사 중</span><div><div class="name">4. 브라우저 저장 유지</div><div class="desc" id="d-ls">동기화 코드를 기억할 수 있는지 봅니다.</div></div></div>
+
+  <div class="summary" id="summary">검사 중이에요…</div>
+  <button type="button" id="retry">다시 검사</button>
+  <div class="meta" id="meta"></div>
+</div>
+<script>
+(function () {
+  function ping(url) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
+    return fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+      .then(function () { clearTimeout(timer); return true; })
+      .catch(function () { clearTimeout(timer); return false; });
+  }
+  function set(id, ok, okText, badText) {
+    var el = document.getElementById(id);
+    el.className = 'badge ' + (ok ? 'ok' : 'bad');
+    el.textContent = ok ? (okText || '통과') : (badText || '막힘');
+  }
+  function storageCheck() {
+    var key = 'schedule-app-test';
+    try {
+      var raw = localStorage.getItem(key);
+      var data = raw ? JSON.parse(raw) : { first: new Date().toISOString(), count: 0 };
+      data.count += 1;
+      data.last = new Date().toISOString();
+      localStorage.setItem(key, JSON.stringify(data));
+      var back = JSON.parse(localStorage.getItem(key));
+      var d = document.getElementById('d-ls');
+      if (back.count >= 2) {
+        set('b-ls', true, '유지됨');
+        d.textContent = '브라우저를 다시 열어도 기억합니다. (방문 ' + back.count + '번째)';
+        return 'kept';
+      }
+      set('b-ls', true, '확인 필요');
+      d.textContent = '저장은 됩니다. 브라우저를 완전히 닫았다가 이 주소를 다시 열어서 "유지됨"으로 바뀌는지 봐주세요.';
+      return 'first';
+    } catch (e) {
+      set('b-ls', false, '안 됨');
+      document.getElementById('d-ls').textContent = '브라우저 저장이 막혀 있어요. 회사 PC에서는 매번 동기화 코드를 입력해야 해요.';
+      return 'blocked';
+    }
+  }
+  function run() {
+    ['b-fb', 'b-sb'].forEach(function (id) { var el = document.getElementById(id); el.className = 'badge wait'; el.textContent = '검사 중'; });
+    document.getElementById('summary').textContent = '검사 중이에요…';
+    var ls = storageCheck();
+    Promise.all([
+      Promise.all([ping('https://firestore.googleapis.com/'), ping('https://firebase.googleapis.com/')]).then(function (r) { return r[0] && r[1]; }),
+      ping('https://supabase.com/')
+    ]).then(function (r) {
+      var fb = r[0], sb = r[1];
+      set('b-fb', fb); set('b-sb', sb);
+      var msg;
+      if (fb) msg = '회사 PC에서 일정 앱을 쓸 수 있어요. Firebase로 진행합니다.';
+      else if (sb) msg = 'Firebase는 막혀 있지만 예비 저장소가 열려 있어요. Supabase로 진행합니다.';
+      else msg = '저장소가 모두 막혀 있어요. 회사 PC에서는 보기만 가능한 방식 등 다른 방법을 같이 찾아봐야 해요.';
+      if (ls === 'first') msg += ' (4번은 브라우저를 다시 열어서 한 번 더 확인해주세요.)';
+      if (ls === 'blocked') msg += ' 단, 회사 PC에서는 동기화 코드를 매번 입력해야 해요.';
+      document.getElementById('summary').textContent = msg;
+      document.getElementById('meta').textContent = '검사 시각: ' + new Date().toLocaleString('ko-KR') + ' · 브라우저: ' + navigator.userAgent;
+    });
+  }
+  document.getElementById('retry').addEventListener('click', run);
+  run();
+})();
+</script>
+</body>
+</html>
