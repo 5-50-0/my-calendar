@@ -203,8 +203,55 @@
 
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
-    $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `앱 버전 1.0.9<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#sync-state').textContent = syncLabel();
+    $('#drawer-foot').innerHTML = `앱 버전 1.1.0<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+  }
+
+  function syncLabel() {
+    if (!window.Sync || !Sync.code) return '이 기기에만 저장 중 · 동기화 연결 전';
+    return ({ on: '동기화 연결됨', connecting: '동기화 연결 중…', offline: '오프라인 · 연결되면 자동으로 맞춰져요', error: '동기화 오류 · 동기화 코드 메뉴를 확인하세요' })[Sync.status] || '동기화 연결됨';
+  }
+
+  // 동기화 코드
+  function openSync() {
+    const draw = () => {
+      if (Sync.code) {
+        return `<div class="m-head"><h2>동기화 코드</h2>${closeBtn}</div>`
+          + `<p class="hint" style="font-size:13.5px;line-height:1.6;margin:0 0 14px">이 기기는 동기화 중이에요. 다른 기기에서도 같은 코드를 넣으면 같은 일정이 보여요. 코드를 아는 사람은 일정을 볼 수 있으니 남에게 알려주지 마세요.</p>`
+          + `<div class="field"><span class="lbl">상태</span><div>${esc(syncLabel())}</div></div>`
+          + `<div class="field"><span class="lbl">내 동기화 코드</span><div class="code-box" id="code-box">${esc(Sync.code.slice(0, 4))}-••••-••••-••••-••••-${esc(Sync.code.slice(-4))}</div><button class="btn" data-show>코드 전체 보기</button></div>`
+          + `<div class="m-actions"><button class="btn primary" data-copylink>연결 링크 복사</button><button class="btn" data-copycode>코드 복사</button></div>`
+          + `<p class="hint" style="margin:10px 0 18px">연결 링크를 카카오톡 '나와의 채팅' 등으로 보내서 다른 기기에서 열면 바로 연결돼요.</p>`
+          + `<div class="m-actions"><button class="btn danger" data-disconnect style="flex:1">이 기기 연결 끊기</button></div>`;
+      }
+      return `<div class="m-head"><h2>동기화 코드</h2>${closeBtn}</div>`
+        + `<p class="hint" style="font-size:13.5px;line-height:1.6;margin:0 0 16px">동기화하면 폰·탭·PC에서 같은 일정을 볼 수 있어요. 처음 한 번만 설정하면 돼요.</p>`
+        + `<div class="field"><span class="lbl">처음 쓰는 경우 (이 기기가 첫 기기)</span><button class="btn primary" data-new>새 동기화 코드 만들기</button><span class="hint">이 기기에 있는 일정이 그대로 올라가요.</span></div>`
+        + `<div class="field" style="margin-top:20px"><label for="f-code">다른 기기에서 이미 쓰는 경우</label><input type="text" id="f-code" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-join>이 코드로 연결</button><span class="hint">이 기기의 일정과 저장된 일정이 합쳐져요.</span></div>`;
+    };
+    const onRemote = () => render();
+    const copy = (text, msg) => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast(msg), () => { prompt('아래 내용을 복사하세요', text); }); };
+    openModal(draw(), m => {
+      m.onclick = async e => {
+        if (e.target.closest('[data-close]')) return;
+        if (e.target.closest('[data-new]')) {
+          try { await Sync.connect(Store, onRemote, Sync.newCode(), { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); toast('동기화를 시작했어요'); } catch (err) { toast('연결하지 못했어요: ' + err.message); }
+          return;
+        }
+        if (e.target.closest('[data-join]')) {
+          const v = $('#f-code', m).value;
+          try { await Sync.connect(Store, onRemote, v, { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); toast('연결했어요. 일정을 맞추는 중이에요'); } catch (err) { toast(err.message); }
+          return;
+        }
+        if (e.target.closest('[data-show]')) { $('#code-box', m).textContent = Sync.code; return; }
+        if (e.target.closest('[data-copycode]')) { copy(Sync.code, '코드를 복사했어요'); return; }
+        if (e.target.closest('[data-copylink]')) { copy(Sync.link(), '연결 링크를 복사했어요'); return; }
+        if (e.target.closest('[data-disconnect]')) {
+          if (!confirm('이 기기의 동기화를 끊을까요?\n이 기기의 일정은 그대로 남고, 다른 기기의 변경은 더 이상 받지 않아요.\n다시 연결하려면 코드가 필요하니 먼저 복사해두세요.')) return;
+          Sync.disconnect(); m.innerHTML = draw(); renderDrawerFoot();
+        }
+      };
+    });
   }
 
   // ---------- 이동 ----------
@@ -478,7 +525,7 @@
     closeDrawer();
     if (b.dataset.tab) { if (b.dataset.tab === 'calendar') showMonth(); else toast(`${b.dataset.tab} 화면은 다음 제작 단계에서 추가돼요`); return; }
     if (b.dataset.soon) { toast(`${b.dataset.soon} 기능은 다음 제작 단계에서 추가돼요`); return; }
-    ({ cats: openCats, theme: openTheme, backup: openBackup })[b.dataset.open]();
+    ({ cats: openCats, theme: openTheme, backup: openBackup, sync: openSync })[b.dataset.open]();
   });
 
   // ---------- 하단 탭 ----------
@@ -550,4 +597,12 @@
   }
 
   render();
+
+  // ---------- 동기화 시작 ----------
+  let rr;
+  const remoteRender = () => { clearTimeout(rr); rr = setTimeout(render, 80); };
+  if (window.Sync) {
+    Sync.onStatus(() => renderDrawerFoot());
+    Sync.start(Store, remoteRender).catch(e => console.error(e));
+  }
 })();

@@ -47,11 +47,14 @@
   try { data = migrate(JSON.parse(localStorage.getItem(KEY))); } catch (e) { data = blank(); }
 
   const listeners = [];
+  const hooks = { item: [], meta: [] };   // 동기화 어댑터가 듣는 변경 알림
+  const emitItem = it => hooks.item.forEach(fn => fn(it));
+  const emitMeta = () => { data.metaUpdatedAt = new Date().toISOString(); hooks.meta.forEach(fn => fn(meta())); };
+  const meta = () => ({ settings: data.settings, weekMemos: data.weekMemos, metaUpdatedAt: data.metaUpdatedAt || '' });
   let saveTimer = null;
   function persist() {
     data.savedAt = new Date().toISOString();
     try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { console.error('저장 실패', e); }
-    if (Store.remote) Store.remote.push(data);
   }
   function changed() {
     clearTimeout(saveTimer);
@@ -71,22 +74,22 @@
       if (!item.id) { item.id = uid(); item.createdAt = now; }
       item.updatedAt = now;
       data.items[item.id] = item;
-      changed();
+      changed(); emitItem(item);
       return item;
     },
     remove(id) {
       const it = data.items[id];
       if (!it) return;
       it.deleted = true; it.updatedAt = new Date().toISOString();
-      changed();
+      changed(); emitItem(it);
     },
     restore(id) {
       const it = data.items[id];
-      if (it) { it.deleted = false; it.updatedAt = new Date().toISOString(); changed(); }
+      if (it) { it.deleted = false; it.updatedAt = new Date().toISOString(); changed(); emitItem(it); }
     },
-    setWeekMemo(key, text) { data.weekMemos[key] = text; changed(); },
+    setWeekMemo(key, text) { data.weekMemos[key] = text; changed(); emitMeta(); },
     weekMemo(key) { return data.weekMemos[key] || ''; },
-    updateSettings(fn) { fn(data.settings); changed(); },
+    updateSettings(fn) { fn(data.settings); changed(); emitMeta(); },
     exportJSON() { return JSON.stringify(data, null, 2); },
     importJSON(text, mode) {
       const incoming = migrate(JSON.parse(text));
@@ -100,9 +103,26 @@
         });
         Object.assign(data.weekMemos, incoming.weekMemos);
       }
-      changed();
+      changed(); emitMeta();
+      Object.values(data.items).forEach(emitItem);
     },
-    defaults: DEFAULT_SETTINGS
+    defaults: DEFAULT_SETTINGS,
+    // ---- 동기화용 ----
+    hook(kind, fn) { hooks[kind].push(fn); },
+    meta,
+    allItems() { return Object.values(data.items); },
+    applyRemoteItem(it) {
+      const cur = data.items[it.id];
+      if (cur && (cur.updatedAt || '') >= (it.updatedAt || '')) return false;
+      data.items[it.id] = it; changed(); return true;
+    },
+    applyRemoteMeta(m) {
+      if (!m || (data.metaUpdatedAt || '') >= (m.metaUpdatedAt || '')) return false;
+      data.settings = Object.assign(clone(DEFAULT_SETTINGS), m.settings || {});
+      data.weekMemos = m.weekMemos || {};
+      data.metaUpdatedAt = m.metaUpdatedAt;
+      changed(); return true;
+    }
   };
 
   window.Store = Store;
