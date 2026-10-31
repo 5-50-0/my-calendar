@@ -1,7 +1,7 @@
 :root {
-  --bg: #ffffff;
-  --bg-soft: #fafbfc;
-  --bg-out: #f6f7f9;
+  --bg: #fcfbf8;
+  --bg-soft: rgba(29, 35, 48, .025);
+  --bg-out: rgba(29, 35, 48, .035);
   --line: #eceef2;
   --line-soft: #f1f2f5;
   --text: #1d2330;
@@ -19,9 +19,9 @@
   --font: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 [data-theme="dark"] {
-  --bg: #16181d;
-  --bg-soft: #1b1e24;
-  --bg-out: #14161a;
+  --bg: #26272b;
+  --bg-soft: rgba(255, 255, 255, .03);
+  --bg-out: rgba(0, 0, 0, .14);
   --line: #2a2e37;
   --line-soft: #23262e;
   --text: #e8eaee;
@@ -32,7 +32,7 @@
   --blue: #8fb4ff;
   --accent: #e8eaee;
   --accent-text: #16181d;
-  --card: #1d2027;
+  --card: #2e2f34;
   --shadow: 0 8px 30px rgba(0, 0, 0, .5);
   --seg: #23262e;
   --rule: rgba(255, 255, 255, .07);
@@ -40,7 +40,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body { font-family: var(--font); background: var(--bg) url(../icons/paper.png) repeat; background-size: 320px 320px; color: var(--text); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
 button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 button { cursor: pointer; }
 
@@ -132,7 +132,7 @@ button { cursor: pointer; }
 .side-note { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
 /* 하단 탭 */
-.tabbar { flex: none; display: flex; border-top: 1px solid var(--line); background: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
+.tabbar { flex: none; display: flex; border-top: 1px solid var(--line); background: transparent; padding-bottom: env(safe-area-inset-bottom); }
 .tab { flex: 1; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; font-size: 11px; color: var(--muted); }
 .tab.on { color: var(--text); font-weight: 700; }
 @media (min-width: 700px) { .tab { flex-direction: row; gap: 8px; font-size: 14px; min-height: 52px; } }
@@ -140,7 +140,7 @@ button { cursor: pointer; }
 /* 메뉴 */
 .scrim { position: fixed; inset: 0; background: rgba(10, 12, 16, .4); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
 .scrim.open { opacity: 1; pointer-events: auto; }
-.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(320px, 84vw); background: var(--card); z-index: 21; transform: translateX(-102%); transition: transform .22s ease; display: flex; flex-direction: column; box-shadow: var(--shadow); padding-top: env(safe-area-inset-top); overflow-y: auto; }
+.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(320px, 84vw); background: var(--card) url(../icons/paper.png) repeat; background-size: 320px 320px; z-index: 21; transform: translateX(-102%); transition: transform .22s ease; display: flex; flex-direction: column; box-shadow: var(--shadow); padding-top: env(safe-area-inset-top); overflow-y: auto; }
 .drawer.open { transform: none; }
 .drawer-head { padding: 22px 22px 14px; border-bottom: 1px solid var(--line); }
 .app-name { font-size: 20px; font-weight: 800; }
@@ -157,7 +157,7 @@ button { cursor: pointer; }
 /* 모달 */
 .modal-wrap { position: fixed; inset: 0; z-index: 30; background: rgba(10, 12, 16, .45); display: flex; align-items: flex-end; justify-content: center; }
 .modal-wrap[hidden] { display: none; }
-.modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); }
+.modal { background: var(--card) url(../icons/paper.png) repeat; background-size: 320px 320px; width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); }
 .m-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .m-head h2 { font-size: 18px; margin: 0; flex: 1; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
@@ -253,5 +253,5 @@ button { cursor: pointer; }
   .modal { border-radius: 18px; }
 }
 @media (min-width: 1100px) {
-  .side { display: flex; flex-direction: column; gap: 20px; width: 300px; flex: none; border-left: 1px solid var(--line); padding: 16px 20px; background: var(--bg-soft); overflow-y: auto; }
+  .side { display: flex; flex-direction: column; gap: 20px; width: 300px; flex: none; border-left: 1px solid var(--line); padding: 16px 20px; background: transparent; overflow-y: auto; }
 }
