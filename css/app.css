@@ -219,6 +219,7 @@ button { cursor: pointer; }
 
 /* 폰 */
 @media (max-width: 699px) {
+  .pc-nav { display: none; }
   .wkno { display: none; }
   body { overflow-x: hidden; }
   .top { gap: 0; padding-left: 4px; padding-right: 4px; }
@@ -243,6 +244,8 @@ button { cursor: pointer; }
 
 /* 태블릿·PC */
 @media (min-width: 700px) {
+  .tabbar { display: none; }
+  .pc-nav { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
   .top { padding: 14px 18px 10px; gap: 8px; }
   .title-btn { font-size: 26px; }
   .dn { font-size: 15px; }

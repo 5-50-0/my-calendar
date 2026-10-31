@@ -204,7 +204,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `앱 버전 1.0.8<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.0.9<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
   }
 
   // ---------- 이동 ----------
@@ -476,6 +476,7 @@
   drawer.addEventListener('click', e => {
     const b = e.target.closest('.drawer-item'); if (!b) return;
     closeDrawer();
+    if (b.dataset.tab) { if (b.dataset.tab === 'calendar') showMonth(); else toast(`${b.dataset.tab} 화면은 다음 제작 단계에서 추가돼요`); return; }
     if (b.dataset.soon) { toast(`${b.dataset.soon} 기능은 다음 제작 단계에서 추가돼요`); return; }
     ({ cats: openCats, theme: openTheme, backup: openBackup })[b.dataset.open]();
   });

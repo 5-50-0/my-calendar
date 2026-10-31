@@ -1,7 +1,7 @@
 // 앱 파일 캐시
 // 인터넷이 되면 항상 서버의 최신 파일을 먼저 쓰고, 안 될 때만 저장해 둔 파일로 실행한다.
 // (일정 데이터는 여기와 상관없이 따로 저장되므로 업데이트해도 지워지지 않는다)
-const VERSION = 'v1.0.8';
+const VERSION = 'v1.0.9';
 const CACHE = 'mycal-' + VERSION;
 const FILES = [
   './', 'index.html', 'css/app.css', 'js/lunar-data.js', 'js/holidays.js', 'js/store.js', 'js/app.js',
