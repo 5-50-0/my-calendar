@@ -1,6 +1,5 @@
 :root {
   --bg: #faf8f3;
-  --paper: url(../icons/paper-light.png);
   --bg-soft: rgba(29, 35, 48, .025);
   --bg-out: transparent;
   --line: rgba(29, 35, 48, .14);
@@ -23,7 +22,6 @@
 }
 [data-theme="dark"] {
   --bg: #323230;
-  --paper: url(../icons/paper-dark.png);
   --bg-soft: rgba(255, 255, 255, .03);
   --bg-out: transparent;
   --line: rgba(255, 255, 255, .16);
@@ -46,7 +44,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { font-family: var(--font); background: var(--bg) var(--paper) repeat; background-size: 300px 300px; color: var(--text); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
 button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
 button { cursor: pointer; }
 
@@ -147,7 +145,7 @@ button { cursor: pointer; }
 /* 메뉴 */
 .scrim { position: fixed; inset: 0; background: rgba(10, 12, 16, .4); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
 .scrim.open { opacity: 1; pointer-events: auto; }
-.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(320px, 84vw); background: var(--card) var(--paper) repeat; background-size: 300px 300px; z-index: 21; transform: translateX(-102%); transition: transform .22s ease; display: flex; flex-direction: column; box-shadow: var(--shadow); padding-top: env(safe-area-inset-top); overflow-y: auto; }
+.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(320px, 84vw); background: var(--card); z-index: 21; transform: translateX(-102%); transition: transform .22s ease; display: flex; flex-direction: column; box-shadow: var(--shadow); padding-top: env(safe-area-inset-top); overflow-y: auto; }
 .drawer.open { transform: none; }
 .drawer-head { padding: 22px 22px 14px; border-bottom: 1px solid var(--line); }
 .app-name { font-size: 20px; font-weight: 800; }
@@ -164,7 +162,7 @@ button { cursor: pointer; }
 /* 모달 */
 .modal-wrap { position: fixed; inset: 0; z-index: 30; background: rgba(10, 12, 16, .45); display: flex; align-items: flex-end; justify-content: center; }
 .modal-wrap[hidden] { display: none; }
-.modal { background: var(--card) var(--paper) repeat; background-size: 300px 300px; width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); }
+.modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow); }
 .m-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .m-head h2 { font-size: 18px; margin: 0; flex: 1; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }

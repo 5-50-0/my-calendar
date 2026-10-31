@@ -204,7 +204,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `앱 버전 1.0.7<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.0.8<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
   }
 
   // ---------- 이동 ----------
