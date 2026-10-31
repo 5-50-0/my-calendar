@@ -115,9 +115,9 @@
     const end = addDays(start, weeks * 7 - 1);
     const map = layout(start, end);
     const today = todayKey();
-    const cols = `${narrow ? 18 : 30}px repeat(7, minmax(0, 1fr))`;
+    const cols = narrow ? 'repeat(7, minmax(0, 1fr))' : '30px repeat(7, minmax(0, 1fr))';
 
-    view.innerHTML = `<div class="wkh" style="--cols:${cols}"><div></div>${['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${w}</div>`).join('')}</div><div class="month" id="month" style="--cols:${cols};grid-template-rows:repeat(${weeks},minmax(0,1fr))"></div>`;
+    view.innerHTML = `<div class="wkh" style="--cols:${cols}">${narrow ? '' : '<div></div>'}${['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${w}</div>`).join('')}</div><div class="month" id="month" style="--cols:${cols};grid-template-rows:repeat(${weeks},minmax(0,1fr))"></div>`;
     const grid = $('#month');
     const rowH = grid.clientHeight / weeks;
     const chipH = narrow ? 20 : 23;
@@ -203,7 +203,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `앱 버전 1.0.4<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.0.5<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
   }
 
   // ---------- 이동 ----------

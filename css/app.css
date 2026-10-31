@@ -1,7 +1,7 @@
 :root {
   --bg: #fcfbf8;
   --bg-soft: rgba(29, 35, 48, .025);
-  --bg-out: rgba(29, 35, 48, .035);
+  --bg-out: rgba(255, 255, 255, .6);
   --line: #eceef2;
   --line-soft: #f1f2f5;
   --text: #1d2330;
@@ -15,13 +15,13 @@
   --card: #ffffff;
   --shadow: 0 8px 30px rgba(20, 24, 33, .14);
   --seg: #f1f3f6;
-  --rule: rgba(29, 35, 48, .07);
+  --rule: rgba(29, 35, 48, .05);
   --font: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 [data-theme="dark"] {
   --bg: #26272b;
   --bg-soft: rgba(255, 255, 255, .03);
-  --bg-out: rgba(0, 0, 0, .14);
+  --bg-out: rgba(255, 255, 255, .07);
   --line: #2a2e37;
   --line-soft: #23262e;
   --text: #e8eaee;
@@ -35,7 +35,7 @@
   --card: #2e2f34;
   --shadow: 0 8px 30px rgba(0, 0, 0, .5);
   --seg: #23262e;
-  --rule: rgba(255, 255, 255, .07);
+  --rule: rgba(255, 255, 255, .05);
 }
 
 * { box-sizing: border-box; }
@@ -52,7 +52,7 @@ button { cursor: pointer; }
 .ib:hover { background: var(--line-soft); }
 .title-btn { border: 0; background: transparent; display: inline-flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; padding: 6px 6px; min-height: 44px; color: var(--text); white-space: nowrap; }
 .nav { display: flex; align-items: center; gap: 2px; }
-.tb { height: 36px; padding: 0 14px; border: 1px solid var(--line); background: transparent; border-radius: 9px; font-size: 14px; color: var(--text-2); }
+.tb { height: 36px; padding: 0 12px; border: 0; background: transparent; border-radius: 9px; font-size: 14px; color: var(--text-2); }
 .spacer { flex: 1; }
 .seg { display: flex; background: var(--seg); border-radius: 10px; padding: 3px; }
 .seg button { border: 0; background: transparent; height: 34px; min-width: 44px; padding: 0 12px; border-radius: 8px; font-size: 14px; color: var(--muted); }
@@ -69,9 +69,9 @@ button { cursor: pointer; }
 .wkh div { padding: 6px 4px; font-size: 12px; color: var(--muted); text-align: center; font-weight: 600; }
 .wkh .sat { color: var(--blue); } .wkh .sun { color: var(--red); }
 .month { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--cols); touch-action: pan-y; }
-.wkno { border: 0; border-bottom: 1px solid var(--line-soft); background: var(--bg-soft); color: var(--faint); font-size: 10px; padding: 6px 0 0; display: flex; justify-content: center; align-items: flex-start; }
+.wkno { border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--faint); font-size: 10px; padding: 6px 0 0; display: flex; justify-content: center; align-items: flex-start; }
 .wkno:hover { color: var(--text); background: var(--line-soft); }
-.day { border-bottom: 1px solid var(--line-soft); border-left: 1px solid var(--line-soft); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+.day { border-bottom: 1px solid var(--line); border-left: 0; padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
   --rule-h: 20px; --rule-top: 27px;
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-h) - 1px), var(--rule) calc(var(--rule-h) - 1px), var(--rule) var(--rule-h));
   background-position: 0 var(--rule-top); background-repeat: repeat-x; background-size: 100% calc(100% - var(--rule-top)); background-origin: border-box; }
@@ -85,8 +85,8 @@ button { cursor: pointer; }
 .hol { font-size: 10px; color: var(--red); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip { display: flex; align-items: center; gap: 4px; font-size: 11px; line-height: 1.25; padding: 2px 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; min-height: 18px; flex: none; user-select: none; -webkit-user-select: none; }
 .chip .tx { overflow: hidden; text-overflow: ellipsis; }
-.chip .tm { font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
-.chip.k { font-weight: 700; }
+.chip .tm { font-weight: 600; font-variant-numeric: tabular-nums; flex: none; }
+.chip.k { font-weight: 600; }
 .chip.done { opacity: .5; }
 .chip.done .tx { text-decoration: line-through; }
 .chip .late { font-size: 9.5px; font-weight: 700; flex: none; opacity: .85; margin-left: auto; padding-left: 2px; }
@@ -214,6 +214,7 @@ button { cursor: pointer; }
 
 /* 폰 */
 @media (max-width: 699px) {
+  .wkno { display: none; }
   body { overflow-x: hidden; }
   .top { gap: 4px; padding-left: 6px; padding-right: 10px; }
   .title-btn { font-size: 19px; padding: 6px 2px; gap: 3px; }
