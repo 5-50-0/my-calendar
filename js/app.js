@@ -98,8 +98,9 @@
     document.documentElement.dataset.theme = Store.settings.theme;
     const meta = document.querySelector('meta[name=theme-color]');
     if (meta) meta.content = Store.settings.theme === 'dark' ? '#16181d' : '#ffffff';
-    $('#seg-month').classList.toggle('on', state.view === 'month');
-    $('#seg-week').classList.toggle('on', state.view === 'week');
+    $('#ico-week').style.display = state.view === 'month' ? '' : 'none';
+    $('#ico-month').style.display = state.view === 'week' ? '' : 'none';
+    $('#btn-view').setAttribute('aria-label', state.view === 'month' ? '주간 보기' : '월간 보기');
     if (state.view === 'month') renderMonth(); else renderWeek();
     renderSide();
     renderDrawerFoot();
@@ -120,8 +121,8 @@
     view.innerHTML = `<div class="wkh" style="--cols:${cols}">${narrow ? '' : '<div></div>'}${['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${w}</div>`).join('')}</div><div class="month" id="month" style="--cols:${cols};grid-template-rows:repeat(${weeks},minmax(0,1fr))"></div>`;
     const grid = $('#month');
     const rowH = grid.clientHeight / weeks;
-    const chipH = narrow ? 20 : 23;
-    const cap = Math.max(1, Math.floor((rowH - 30) / chipH));
+    const chipH = narrow ? 16.5 : 21;
+    const cap = Math.max(1, Math.floor((rowH - 34) / chipH));
 
     let html = '';
     for (let w = 0; w < weeks; w++) {
@@ -203,7 +204,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = '이 기기에 저장 중 · 동기화 연결 전';
-    $('#drawer-foot').innerHTML = `앱 버전 1.0.6<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.0.7<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().length}개`;
   }
 
   // ---------- 이동 ----------
@@ -491,8 +492,8 @@
   $('#btn-next').onclick = () => go(1);
   $('#btn-today').onclick = goToday;
   $('#btn-title').onclick = openYM;
-  $('#seg-month').onclick = showMonth;
-  $('#seg-week').onclick = () => {
+  $('#btn-view').onclick = () => {
+    if (state.view === 'week') { showMonth(); return; }
     const t = todayKey();
     const inMonth = parse(t).getFullYear() === state.year && parse(t).getMonth() === state.month;
     showWeek(inMonth ? mondayOf(t) : mondayOf(keyOf(new Date(state.year, state.month, 1))));

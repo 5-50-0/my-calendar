@@ -7,13 +7,13 @@
 
   const DEFAULT_SETTINGS = {
     cats: {
-      k: { name: '근태', color: '#C2410C', subs: ['연차', '탄력', '출장', '교육', '여행'] },
-      c: { name: '회사', color: '#B5545C', subs: ['점검', '업무', '회식'] },
-      p: { name: '개인', color: '#2F6F7E', subs: ['생일', '약속'] }
+      k: { name: '근태', color: '#F0561D', subs: ['연차', '탄력', '출장', '교육', '여행'] },
+      c: { name: '회사', color: '#CE8886', subs: ['점검', '업무', '회식'] },
+      p: { name: '개인', color: '#3F7D8C', subs: ['생일', '약속'] }
     },
     subColors: {},       // { '회사/점검': '#123456' } 세부 분류 색 (없으면 큰 분류 색)
-    todoColor: '#646B78',
-    theme: 'light'
+    todoColor: '#6E6E6B',
+    theme: 'dark'
   };
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -35,6 +35,10 @@
     d.settings = Object.assign(clone(DEFAULT_SETTINGS), d.settings || {});
     ['k', 'c', 'p'].forEach(c => { if (!d.settings.cats[c]) d.settings.cats[c] = clone(DEFAULT_SETTINGS.cats[c]); });
     d.settings.subColors = d.settings.subColors || {};
+    // 예전 기본색을 그대로 쓰고 있으면 새 기본색으로 바꾼다 (직접 바꾼 색은 유지)
+    const OLD = { k: '#C2410C', c: '#B5545C', p: '#2F6F7E' };
+    ['k', 'c', 'p'].forEach(c => { if ((d.settings.cats[c].color || '').toUpperCase() === OLD[c]) d.settings.cats[c].color = DEFAULT_SETTINGS.cats[c].color; });
+    if ((d.settings.todoColor || '').toUpperCase() === '#646B78') d.settings.todoColor = DEFAULT_SETTINGS.todoColor;
     d.schema = SCHEMA;
     return d;
   }
