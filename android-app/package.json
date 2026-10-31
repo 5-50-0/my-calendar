@@ -1,0 +1,14 @@
+{
+  "name": "my-calendar-android",
+  "private": true,
+  "version": "1.0.0",
+  "description": "내 일정 안드로이드 앱 (GitHub Actions에서 빌드)",
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

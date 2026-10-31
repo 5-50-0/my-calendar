@@ -1,0 +1,43 @@
+# 안드로이드 앱(APK) 빌드: android-app 폴더가 바뀌면 GitHub가 APK를 만들어
+# 'app-latest' 릴리스에 올린다. 앱 화면 내용은 웹 주소에서 불러오므로
+# 화면 수정만 할 때는 APK를 다시 만들 필요가 없다.
+name: Android APK
+on:
+  push:
+    branches: [main]
+    paths: ['android-app/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build APK
+        working-directory: android-app
+        run: |
+          npm install
+          npx cap add android
+          npx capacitor-assets generate --android
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/my-calendar.apk"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: 내 일정 앱 (안드로이드)
+          make_latest: true
+          files: my-calendar.apk
+          body: |
+            갤럭시 폰·탭용 설치 파일입니다. my-calendar.apk를 받아서 설치하세요.
+            앱 화면은 실행할 때마다 최신 버전을 자동으로 불러옵니다.

@@ -1,0 +1,12 @@
+{
+  "appId": "io.github.fivefiftyzero.mycalendar",
+  "appName": "내 일정",
+  "webDir": "www",
+  "server": {
+    "url": "https://5-50-0.github.io/my-calendar/",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#323230"
+  }
+}
