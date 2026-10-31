@@ -212,7 +212,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.2.2<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.2.3<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {

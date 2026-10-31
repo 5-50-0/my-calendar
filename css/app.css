@@ -277,7 +277,12 @@ button { cursor: pointer; }
 body[data-screen="work"] #btn-today, body[data-screen="work"] #btn-view, body[data-screen="work"] .pc-only,
 body[data-screen="book"] #btn-today, body[data-screen="book"] #btn-view, body[data-screen="book"] .pc-only,
 body[data-screen="rules"] #btn-today, body[data-screen="rules"] #btn-view, body[data-screen="rules"] .pc-only { display: none; }
-body[data-screen="rules"] .title-btn svg { display: none; }
+body[data-screen="rules"] .title-btn svg, body[data-screen="attend"] .title-btn svg { display: none; }
+body[data-screen="attend"] #btn-today, body[data-screen="attend"] #btn-view, body[data-screen="attend"] .pc-only { display: none; }
+.att-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.att-top .yr { display: flex; align-items: center; gap: 2px; } .att-top .yr strong { font-size: 17px; font-weight: 600; }
+.sec-title { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
+.att { max-width: 760px; }
 .rules-list .lrow { padding-left: 6px; }
 body[data-screen="work"] .title-btn svg, body[data-screen="book"] .title-btn svg { display: none; }
 .screen { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 28px; }

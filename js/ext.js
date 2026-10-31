@@ -347,47 +347,70 @@
     const std = weeks.reduce((a, w) => a + w.std, 0), act = weeks.reduce((a, w) => a + w.act, 0);
     return { start, end, weeks, std, act };
   }
-  function openAttend() {
-    const draw = () => {
-      const head = `<div class="m-head"><h2>근태 현황</h2>${A.closeBtn}</div><div class="pills" style="margin-bottom:14px">${pill(attTab === 'leave', 'data-tab2="leave"', '연차')}${pill(attTab === 'flex', 'data-tab2="flex"', '탄력근무')}</div>`;
-      if (attTab === 'leave') {
-        const granted = num((S().leave || {})[attYear]);
-        const uses = leaveUses(attYear);
-        const used = uses.reduce((a, u) => a + u.amt, 0);
-        return head + `<div class="ym-year"><button class="ib" data-yr="-1" aria-label="이전 해">‹</button><strong style="font-size:20px">${attYear}년</strong><button class="ib" data-yr="1" aria-label="다음 해">›</button></div>`
-          + `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
-          + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}" placeholder="예) 15"></div>`
-          + `<div class="field"><span class="lbl">사용 내역</span><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty">사용 내역이 없어요</div>'}</div>`
-          + `<span class="hint">근태 분류에 '연차'(세부 분류) 또는 제목에 연차·반차·반반차가 들어간 일정을 세요. 주말·공휴일은 빼고 계산해요.</span></div>`;
-      }
-      const periods = (S().flex || []).slice().sort((a, b) => b.start.localeCompare(a.start));
-      return head + `<div class="field"><span class="lbl">새 탄력 주기</span><div class="row2"><div class="field" style="margin:0"><label for="fx-date">시작 주 (아무 날짜나 고르면 그 주 월요일로 맞춰져요)</label><input type="date" id="fx-date" value="${A.todayKey()}"></div><div class="field" style="margin:0;flex:0 0 110px"><label for="fx-weeks">기간</label><select id="fx-weeks">${Array.from({ length: 11 }, (_, i) => `<option value="${i + 2}">${i + 2}주</option>`).join('')}</select></div></div><button class="btn" data-addflex style="margin-top:8px">주기 추가</button></div>`
-        + (periods.length ? periods.map(p => {
-          const rp = flexReport(p), diff = rp.std - rp.act;
-          return `<div class="fx-card"><div class="fx-head"><strong>${rp.start.replace(/-/g, '.')} ~ ${rp.end.slice(5).replace('-', '.')}</strong><span>${p.weeks}주</span><button class="x" data-rmflex="${p.id}" aria-label="주기 삭제">✕</button></div>`
-            + `<table class="fx"><thead><tr><th>주</th><th>기준</th><th>근무</th><th>52h까지</th></tr></thead><tbody>${rp.weeks.map((w, i) => `<tr class="${w.act > 52 ? 'over' : ''}"><td>${i + 1}주 <small>${w.from.slice(5).replace('-', '/')}~</small></td><td>${h1(w.std)}h</td><td>${h1(w.act)}h</td><td>${w.act > 52 ? '초과 ' + h1(w.act - 52) + 'h' : h1(52 - w.act) + 'h'}</td></tr>${w.notes.length ? `<tr class="nt"><td colspan="4">${w.notes.map(A.esc).join('<br>')}</td></tr>` : ''}`).join('')}</tbody>`
-            + `<tfoot><tr><td>합계</td><td>${h1(rp.std)}h</td><td>${h1(rp.act)}h</td><td></td></tr></tfoot></table>`
-            + `<div class="fx-sum ${diff < 0 ? 'neg' : ''}">${diff >= 0 ? `평균 주 40시간 기준으로 <strong>${h1(diff)}시간</strong> 더 근무할 수 있어요` : `평균 주 40시간을 <strong>${h1(-diff)}시간</strong> 넘었어요. 남은 기간에 그만큼 단축해야 해요`}</div></div>`;
-        }).join('') : '<div class="empty">등록된 탄력 주기가 없어요</div>')
-        + `<p class="hint" style="line-height:1.6">일정 제목에 <b>(~21:00)</b>처럼 끝난 시각을 쓰면 08:30부터, <b>(08:30~16:00)</b>처럼 쓰면 그 시간으로 계산해요. 점심 12:00~13:00은 빼요. 평일은 기본 8시간, 주말·공휴일은 0시간이에요. 연차는 근무한 것으로 봐요.</p>`;
+  function renderAttend(view) {
+    $('#title-text').textContent = '근태 현황';
+    const top = `<div class="att-top"><div class="pills">${pill(attTab === 'leave', 'data-tab2="leave"', '연차')}${pill(attTab === 'flex', 'data-tab2="flex"', '탄력근무')}</div><div class="yr"><button class="ib" data-yr="-1" aria-label="이전 해">‹</button><strong>${attYear}년</strong><button class="ib" data-yr="1" aria-label="다음 해">›</button></div></div>`;
+    let body = '';
+    if (attTab === 'leave') {
+      const granted = num((S().leave || {})[attYear]);
+      const uses = leaveUses(attYear);
+      const used = uses.reduce((a, u) => a + u.amt, 0);
+      body = `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
+        + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}" placeholder="예) 15"></div>`
+        + `<div class="sec-title">사용 내역</div><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty" style="padding:12px 4px">사용 내역이 없어요</div>'}</div>`
+        + `<p class="hint" style="line-height:1.6;margin-top:14px">근태 분류에서 세부 분류가 '연차'이거나 제목에 연차·반차(0.5)·반반차(0.25)가 들어간 일정을 세요. 주말·공휴일은 빼고 계산해요.</p>`;
+    } else {
+      const today = A.todayKey();
+      const periods = (S().flex || []).filter(p => p.start.startsWith(attYear + '-') || A.addDays(p.start, p.weeks * 7 - 1).startsWith(attYear + '-'))
+        .sort((a, b) => b.start.localeCompare(a.start));
+      body = `<div class="list">${periods.length ? periods.map(p => {
+        const rp = flexReport(p), diff = rp.std - rp.act, over52 = rp.weeks.some(w => w.act > 52);
+        const now = today >= rp.start && today <= rp.end;
+        return `<button class="lrow" data-flex="${p.id}"><span class="lmain"><span class="lt">${rp.start.slice(5).replace('-', '.')} ~ ${rp.end.slice(5).replace('-', '.')} <em>${p.weeks}주${now ? ' · 진행 중' : ''}</em></span><span class="ls">기준 ${h1(rp.std)}h · 근무 ${h1(rp.act)}h${over52 ? ' · 주 52시간 초과 주 있음' : ''}</span></span><span class="amt ${diff < 0 || over52 ? 'neg' : ''}">${diff >= 0 ? `+${h1(diff)}h 여유` : `${h1(-diff)}h 초과`}</span></button>`;
+      }).join('') : `<div class="empty" style="padding:24px 4px">${attYear}년에 등록된 탄력 주기가 없어요. 오른쪽 위 + 로 추가하세요.</div>`}</div>`
+        + `<p class="hint" style="line-height:1.6;margin-top:14px">일정 제목에 <b>(~21:00)</b>처럼 끝난 시각을 쓰면 08:30부터, <b>(08:30~16:00)</b>처럼 쓰면 그 시간으로 계산해요. 점심 12:00~13:00은 빼요. 평일은 기본 8시간, 주말·공휴일은 0시간, 연차는 근무한 것으로 봐요.</p>`;
+    }
+    view.innerHTML = `<div class="screen att">${top}${body}</div>`;
+    view.onclick = e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.tab2) { attTab = b.dataset.tab2; renderAttend(view); return; }
+      if (b.dataset.yr) { attYear += Number(b.dataset.yr); renderAttend(view); return; }
+      if (b.dataset.flex) openFlex(b.dataset.flex);
     };
-    A.openModal(draw(), m => {
+    view.onchange = e => {
+      if (e.target.id === 'lv-granted') { const v = num(e.target.value); Store.updateSettings(s => { s.leave = s.leave || {}; s.leave[attYear] = v; }); renderAttend(view); A.toast('저장했어요'); }
+    };
+  }
+  function openFlex(id) {
+    const p = (S().flex || []).find(x => x.id === id); if (!p) return;
+    const rp = flexReport(p), diff = rp.std - rp.act;
+    A.openModal(`<div class="m-head"><h2>탄력근무 ${rp.start.replace(/-/g, '.')} ~ ${rp.end.slice(5).replace('-', '.')}</h2>${A.closeBtn}</div>`
+      + `<table class="fx"><thead><tr><th>주</th><th>기준</th><th>근무</th><th>52h까지</th></tr></thead><tbody>${rp.weeks.map((w, i) => `<tr class="${w.act > 52 ? 'over' : ''}"><td>${i + 1}주 <small>${w.from.slice(5).replace('-', '/')}~</small></td><td>${h1(w.std)}h</td><td>${h1(w.act)}h</td><td>${w.act > 52 ? '초과 ' + h1(w.act - 52) + 'h' : h1(52 - w.act) + 'h'}</td></tr>${w.notes.length ? `<tr class="nt"><td colspan="4">${w.notes.map(A.esc).join('<br>')}</td></tr>` : ''}`).join('')}</tbody><tfoot><tr><td>합계</td><td>${h1(rp.std)}h</td><td>${h1(rp.act)}h</td><td></td></tr></tfoot></table>`
+      + `<div class="fx-sum ${diff < 0 ? 'neg' : ''}">${diff >= 0 ? `평균 주 40시간 기준으로 <strong>${h1(diff)}시간</strong> 더 근무할 수 있어요` : `평균 주 40시간을 <strong>${h1(-diff)}시간</strong> 넘었어요. 남은 기간에 그만큼 단축해야 해요`}</div>`
+      + `<div class="m-actions" style="margin-top:16px"><button class="btn danger" data-rmflex style="flex:1">이 주기 삭제</button></div>`, m => {
       m.onclick = e => {
-        const b = e.target.closest('button'); if (!b || b.hasAttribute('data-close')) return;
-        if (b.dataset.tab2) { attTab = b.dataset.tab2; m.innerHTML = draw(); return; }
-        if (b.dataset.yr) { attYear += Number(b.dataset.yr); m.innerHTML = draw(); return; }
-        if (b.hasAttribute('data-addflex')) {
-          const start = A.mondayOf($('#fx-date', m).value || A.todayKey()), weeks = Number($('#fx-weeks', m).value);
-          Store.updateSettings(s => { s.flex = (s.flex || []).concat({ id: Date.now().toString(36), start, weeks }); });
-          m.innerHTML = draw(); A.toast(`${start.replace(/-/g, '.')}(월)부터 ${weeks}주로 등록했어요`); return;
+        if (e.target.closest('[data-rmflex]')) {
+          if (!confirm('이 탄력 주기를 삭제할까요?')) return;
+          Store.updateSettings(s => { s.flex = (s.flex || []).filter(x => x.id !== id); }); A.closeModal(); A.render();
         }
-        if (b.dataset.rmflex) { if (!confirm('이 탄력 주기를 지울까요?')) return; Store.updateSettings(s => { s.flex = (s.flex || []).filter(p => p.id !== b.dataset.rmflex); }); m.innerHTML = draw(); }
-      };
-      m.onchange = e => {
-        if (e.target.id === 'lv-granted') { const v = num(e.target.value); Store.updateSettings(s => { s.leave = s.leave || {}; s.leave[attYear] = v; }); m.innerHTML = draw(); }
       };
     });
   }
+  function addFlex() {
+    A.openModal(`<div class="m-head"><h2>탄력 주기 추가</h2>${A.closeBtn}</div>`
+      + `<div class="field"><label for="fx-date">시작 주</label><input type="date" id="fx-date" value="${A.todayKey()}"><span class="hint">아무 날짜나 고르면 그 주 월요일로 맞춰져요.</span></div>`
+      + `<div class="field"><label for="fx-weeks">기간</label><select id="fx-weeks">${Array.from({ length: 11 }, (_, i) => `<option value="${i + 2}">${i + 2}주</option>`).join('')}</select></div>`
+      + `<div class="m-actions"><button class="btn primary" data-addflex>추가</button></div>`, m => {
+      m.onclick = e => {
+        if (!e.target.closest('[data-addflex]')) return;
+        const start = A.mondayOf($('#fx-date', m).value || A.todayKey()), weeks = Number($('#fx-weeks', m).value);
+        Store.updateSettings(s => { s.flex = (s.flex || []).concat({ id: Date.now().toString(36), start, weeks }); });
+        attTab = 'flex'; attYear = Number(start.slice(0, 4));
+        A.closeModal(); A.render(); A.toast(`${start.replace(/-/g, '.')}(월)부터 ${weeks}주로 등록했어요`);
+      };
+    });
+  }
+  function openAttend() { A.setScreen('attend'); }
 
   // ======================= 미니북 =======================
   const COVERS = ['#2F4A6B', '#7A3533', '#2E5A4C', '#4E8E92', '#B98A6E', '#C77D93', '#5E9BC2', '#4A4744'];
@@ -848,8 +871,8 @@
     },
     Lunar,
     ruleEntries,
-    renderScreen(sc, view) { view.onclick = null; if (sc === 'work') renderWork(view); else if (sc === 'book') renderBooks(view); else if (sc === 'rules') renderRules(view); },
-    addOnScreen(sc) { if (sc === 'rules') { openRuleEdit(null); return; } if (sc === 'work') openWork(null); else if (sc === 'book') { const b = curBook && Store.item(curBook); if (b && !b.deleted) newPageIn(b.id); else openBookEdit(null); } },
+    renderScreen(sc, view) { view.onclick = null; if (sc === 'work') renderWork(view); else if (sc === 'book') renderBooks(view); else if (sc === 'rules') renderRules(view); else if (sc === 'attend') renderAttend(view); },
+    addOnScreen(sc) { if (sc === 'rules') { openRuleEdit(null); return; } if (sc === 'attend') { if (attTab === 'flex') addFlex(); else { const el = $('#lv-granted'); if (el) el.focus(); } return; } if (sc === 'work') openWork(null); else if (sc === 'book') { const b = curBook && Store.item(curBook); if (b && !b.deleted) newPageIn(b.id); else openBookEdit(null); } },
     openOccurrence, toggleOccurrence, onItemSaved, openWork, meetingFor, openPage,
     openRules, openAttend, openIO
   };
