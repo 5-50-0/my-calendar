@@ -74,11 +74,11 @@ button { cursor: pointer; }
 .wkh { display: grid; grid-template-columns: var(--cols); border-bottom: 1px solid var(--line); flex: none; }
 .wkh div { padding: 6px 4px 7px; font-size: 13px; color: var(--muted); text-align: center; font-weight: 400; }
 .wkh .sat { color: var(--blue); } .wkh .sun { color: var(--red); }
-.month { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--cols); touch-action: pan-y; }
+.month { --rule-h: 16.5px; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--cols); touch-action: pan-y; }
 .wkno { border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--faint); font-size: 10px; padding: 6px 0 0; display: flex; justify-content: center; align-items: flex-start; }
 .wkno:hover { color: var(--text); background: var(--line-soft); }
-.day { border-bottom: 1px solid var(--line); border-left: 1px solid var(--vline); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
-  --rule-h: 16.5px; --rule-top: 30.5px;
+.day { border-bottom: 1px solid var(--line); border-left: 1px solid var(--vline); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: calc(var(--rule-h) - 14.5px); cursor: pointer;
+  --rule-top: 30.5px;
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-h) - 1px), var(--rule) calc(var(--rule-h) - 1px), var(--rule) var(--rule-h));
   background-position: 0 var(--rule-top); background-repeat: repeat-x; background-size: 100% calc(100% - var(--rule-top)); background-origin: border-box; }
 .wcol { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px); background-position: 0 38px; background-repeat: no-repeat; background-size: 100% calc(100% - 38px); }
@@ -260,7 +260,8 @@ button { cursor: pointer; }
   .chip { font-size: 12.5px; padding: 0 6px; height: 19px; line-height: 19px; }
   .dn { font-size: 15px; }
   .hol { font-size: 11px; }
-  .day { padding: 4px 4px; --rule-h: 21px; --rule-top: 32.5px; }
+  .month { --rule-h: 21px; }
+  .day { padding: 4px 4px; --rule-top: 32.5px; gap: calc(var(--rule-h) - 19px); }
   .mini { display: block; }
   .week { padding: 0 18px 24px; }
   .wcols { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -323,12 +324,16 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .fx-sum { margin-top: 10px; font-size: 13.5px; line-height: 1.5; }
 .memo-view { white-space: pre-wrap; font-size: 14px; line-height: 1.6; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; }
 .steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.step { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line-soft); padding-bottom: 6px; }
+.step { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; background: var(--card); touch-action: manipulation; -webkit-touch-callout: none; border-bottom: 1px solid var(--line-soft); padding-bottom: 6px; }
 .step .ck { width: 32px; height: 32px; border-radius: 999px; border: 1.5px solid var(--line); background: transparent; font-size: 13px; color: var(--muted); flex: none; }
 .step .ck.on { background: var(--chart); border-color: transparent; color: #fff; }
 .step.done .st-title { text-decoration: line-through; color: var(--muted); }
 .st-title { flex: 1 1 140px; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px; font-size: 14.5px; }
-.st-date { flex: 0 0 140px; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 7px; font-size: 13px; }
+.st-date { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.step { position: relative; }
+.st-dl { flex: none; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 0 4px; height: 32px; min-width: 30px; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.step.done .st-dl { font-size: 11.5px; }
+.st-x { flex: none; width: 28px; height: 32px; border: 0; background: transparent; color: var(--muted); }
 .st-btns { display: flex; } .st-btns button { width: 30px; height: 32px; border: 0; background: transparent; color: var(--muted); }
 .st-done { font-size: 11.5px; color: var(--muted); width: 100%; padding-left: 38px; }
 .logs { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
@@ -382,3 +387,41 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .guide ol { margin: 6px 0 0; padding-left: 20px; }
 .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 @media (min-width: 700px) { .modal { max-width: 720px; } .screen { padding: 14px 24px 32px; } .wlist { max-width: 900px; } }
+
+.sal-list { border-top: 1px solid var(--line-soft); }
+.sal-list .lrow { width: 100%; }
+.sal-r { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.sal-total { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 2px 16px; border-bottom: 1px solid var(--line-soft); margin-bottom: 14px; }
+.sal-total span { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.sal-total strong { font-size: 18px; font-weight: 600; }
+
+/* 월간 할 일: 체크박스 */
+.chip.box { background: transparent; color: var(--text); padding-left: 1px; }
+.chip.box .cb { flex: none; width: 10px; height: 10px; border: 1.3px solid var(--muted); border-radius: 2.5px; margin-right: 2px; position: relative; }
+.chip.box.done { opacity: .45; }
+.chip.box.done .cb { background: var(--muted); border-color: var(--muted); }
+.chip.box.done .cb::after { content: ''; position: absolute; left: 2.6px; top: .2px; width: 2.6px; height: 5.4px; border: solid var(--bg); border-width: 0 1.4px 1.4px 0; transform: rotate(45deg); }
+@media (min-width: 700px) { .chip.box .cb { width: 12px; height: 12px; } .chip.box.done .cb::after { left: 3.2px; top: .4px; width: 3px; height: 6.5px; } }
+
+/* 확인 팝업 */
+.confirm-wrap { position: fixed; inset: 0; z-index: 40; background: rgba(10, 12, 16, .45); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.confirm-wrap[hidden] { display: none; }
+.confirm { background: var(--card); border-radius: 16px; padding: 20px 18px 16px; width: 100%; max-width: 340px; box-shadow: var(--shadow); }
+.confirm p { margin: 0 0 18px; font-size: 15.5px; line-height: 1.55; }
+.confirm .m-actions .btn { flex: 1; }
+/* 꾹 누르기 메뉴 */
+.sheet { display: flex; flex-direction: column; }
+.sheet-btn { border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; text-align: left; padding: 15px 4px; font-size: 16px; }
+.sheet-btn:last-child { border-bottom: 0; }
+.sheet-btn.danger { color: var(--red); }
+.fixed { font-size: 15px; padding: 4px 0; }
+/* 꾹 눌러서 순서 바꾸기 */
+.sorting { user-select: none; -webkit-user-select: none; }
+.lifted { opacity: .25; }
+.ghost { position: fixed; z-index: 50; pointer-events: none; opacity: .95; transform: scale(1.04); box-shadow: 0 10px 28px rgba(0,0,0,.35); border-radius: 10px; background: var(--card); }
+.bk { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.bk .cs { font-size: 12px; color: var(--muted); }
+
+.choose { display: flex; flex-direction: column; gap: 8px; }
+.choose .btn { width: 100%; }
+.choose .btn.danger { color: var(--red); }

@@ -87,8 +87,10 @@
     const bg = colorOf(it), fg = textOn(bg);
     const [tm, tx] = splitTitle(it.title);
     const done = it.kind === 'todo' && it.done && !opts.noDone;
-    const cls = `chip ${it.kind === 'todo' ? 'todo' : it.cat}${done ? ' done' : ''}`;
-    return `<div class="${cls}" data-id="${it.id}" style="background:${bg};color:${fg}">`
+    const box = opts.box && it.kind === 'todo';
+    const cls = `chip ${it.kind === 'todo' ? 'todo' : it.cat}${done ? ' done' : ''}${box ? ' box' : ''}`;
+    return `<div class="${cls}" data-id="${it.id}"${box ? '' : ` style="background:${bg};color:${fg}"`}>`
+      + (box ? `<span class="cb" data-check="${it.id}" role="checkbox" aria-checked="${it.done ? 'true' : 'false'}" aria-label="완료"></span>` : '')
       + (tm ? `<span class="tm">${esc(tm)}</span>` : '')
       + `<span class="tx">${esc(tx || '(제목 없음)')}</span>`
       + (e.late > 0 ? `<span class="late"><span class="lp">+</span>${e.late}<span class="lt">일 밀림</span></span>` : '')
@@ -107,11 +109,12 @@
     document.body.dataset.screen = state.screen;
     $('#today-num').textContent = new Date().getDate();
     $$('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === state.screen));
-    if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; renderDrawerFoot(); return; }
+    if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; renderDrawerFoot(); syncBack(); return; }
     view.onclick = null;
     if (state.view === 'month') renderMonth(); else renderWeek();
     renderSide();
     renderDrawerFoot();
+    syncBack();
   }
 
   function renderMonth() {
@@ -129,7 +132,10 @@
     view.innerHTML = `<div class="wkh" style="--cols:${cols}">${narrow ? '' : '<div></div>'}${['월', '화', '수', '목', '금', '토', '일'].map((w, i) => `<div class="${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}">${w}</div>`).join('')}</div><div class="month" id="month" style="--cols:${cols};grid-template-rows:repeat(${weeks},minmax(0,1fr))"></div>`;
     const grid = $('#month');
     const rowH = grid.clientHeight / weeks;
-    const chipH = narrow ? 16.5 : 21;
+    const baseH = narrow ? 16.5 : 21, ruleTop = narrow ? 30.5 : 32.5;
+    const lines = Math.max(1, Math.round((rowH - ruleTop) / baseH));
+    const chipH = (rowH - ruleTop) / lines;
+    grid.style.setProperty('--rule-h', chipH + 'px');
     const cap = Math.max(1, Math.floor((rowH - 34) / chipH));
 
     let html = '';
@@ -147,7 +153,7 @@
         if (k === today) cls += ' today';
         const shown = list.length > cap ? list.slice(0, cap - 1) : list;
         html += `<div class="${cls}" data-day="${k}"><div class="dh"><span class="dn">${d.getDate()}</span>${hol ? `<span class="hol">${esc(hol[0])}</span>` : ''}</div>`
-          + shown.map(e => chipHTML(e)).join('')
+          + shown.map(e => chipHTML(e, { box: true })).join('')
           + (list.length > shown.length ? `<div class="more">+${list.length - shown.length}</div>` : '')
           + `</div>`;
       }
@@ -212,7 +218,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.2.5<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.3.0<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -229,13 +235,13 @@
           + `<div class="field"><span class="lbl">상태</span><div>${esc(syncLabel())}</div></div>`
           + `<div class="field"><span class="lbl">내 동기화 코드</span><div class="code-box" id="code-box">${esc(Sync.code.slice(0, 4))}-••••-••••-••••-••••-${esc(Sync.code.slice(-4))}</div><button class="btn" data-show>코드 전체 보기</button></div>`
           + `<div class="m-actions"><button class="btn primary" data-copylink>연결 링크 복사</button><button class="btn" data-copycode>코드 복사</button></div>`
-          + `<p class="hint" style="margin:10px 0 18px">연결 링크를 카카오톡 '나와의 채팅' 등으로 보내서 다른 기기에서 열면 바로 연결돼요.</p>`
+          + ``
           + `<div class="m-actions"><button class="btn danger" data-disconnect style="flex:1">이 기기 연결 끊기</button></div>`;
       }
       return `<div class="m-head"><h2>동기화 코드</h2>${closeBtn}</div>`
-        + `<p class="hint" style="font-size:13.5px;line-height:1.6;margin:0 0 16px">동기화하면 폰·탭·PC에서 같은 일정을 볼 수 있어요. 처음 한 번만 설정하면 돼요.</p>`
-        + `<div class="field"><span class="lbl">처음 쓰는 경우 (이 기기가 첫 기기)</span><button class="btn primary" data-new>새 동기화 코드 만들기</button><span class="hint">이 기기에 있는 일정이 그대로 올라가요.</span></div>`
-        + `<div class="field" style="margin-top:20px"><label for="f-code">다른 기기에서 이미 쓰는 경우</label><input type="text" id="f-code" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-join>이 코드로 연결</button><span class="hint">이 기기의 일정과 저장된 일정이 합쳐져요.</span></div>`;
+        + ``
+        + `<div class="field"><span class="lbl">처음 쓰는 경우 (이 기기가 첫 기기)</span><button class="btn primary" data-new>새 동기화 코드 만들기</button></div>`
+        + `<div class="field" style="margin-top:20px"><label for="f-code">다른 기기에서 이미 쓰는 경우</label><input type="text" id="f-code" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-join>이 코드로 연결</button></div>`;
     };
     const onRemote = () => render();
     const copy = (text, msg) => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast(msg), () => { prompt('아래 내용을 복사하세요', text); }); };
@@ -290,19 +296,69 @@
     render();
   }
 
+  function closeDrawer() { $('#drawer').classList.remove('open'); $('#drawer-scrim').classList.remove('open'); syncBack(); }
+
   // ---------- 모달 ----------
   const wrap = $('#modal-wrap'), modal = $('#modal');
   function openModal(html, onReady) {
-    modal.onclick = modal.oninput = modal.onchange = null;
+    modal.onclick = modal.oninput = modal.onchange = null; modal._guard = null;
+    syncBack();
     modal.innerHTML = html;
     wrap.hidden = false;
     if (onReady) onReady(modal);
   }
-  function closeModal() { wrap.hidden = true; modal.innerHTML = ''; }
+  function closeModal() { wrap.hidden = true; modal.innerHTML = ''; modal._guard = null; syncBack(); }
   wrap.addEventListener('click', e => { if (e.target === wrap) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !wrap.hidden) closeModal(); });
   const closeBtn = '<button class="ib" data-close aria-label="닫기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
+
+  // 확인 팝업 (열린 창 위에 겹쳐 뜸)
+  const cwrap = $('#confirm-wrap'), cbox = $('#confirm');
+  function confirmBox(msg, okLabel, onOk, noLabel) {
+    cbox.innerHTML = `<p>${esc(msg)}</p><div class="m-actions"><button class="btn" data-c-no>${esc(noLabel || '취소')}</button><button class="btn primary" data-c-ok>${esc(okLabel || '확인')}</button></div>`;
+    cwrap.hidden = false;
+    cbox.onclick = e => {
+      if (e.target.closest('[data-c-ok]')) { cwrap.hidden = true; syncBack(); onOk(); }
+      else if (e.target.closest('[data-c-no]')) { cwrap.hidden = true; syncBack(); }
+    };
+    syncBack();
+  }
+  // 여러 개 중 고르기: [[글자, 실행할 함수, 'danger'], ...]
+  function chooseBox(msg, opts) {
+    cbox.innerHTML = `<p>${esc(msg)}</p><div class="choose">${opts.map((o, i) => `<button class="btn ${o[2] === 'danger' ? 'danger' : ''}" data-c="${i}">${esc(o[0])}</button>`).join('')}</div>`;
+    cwrap.hidden = false;
+    cbox.onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; cwrap.hidden = true; syncBack(); const fn = opts[b.dataset.c][1]; if (fn) fn(); };
+    syncBack();
+  }
+  cwrap.addEventListener('click', e => { if (e.target === cwrap) { cwrap.hidden = true; syncBack(); } });
+
+  // ---------- 뒤로가기: 창 닫기 → 화면 한 단계 위로 → 달력 → 앱 종료 ----------
+  const isRoot = () => state.screen === 'calendar' && state.view === 'month' && wrap.hidden && cwrap.hidden && !$('#drawer').classList.contains('open');
+  function goBack() {
+    if (!cwrap.hidden) { cwrap.hidden = true; return; }
+    if ($('#drawer').classList.contains('open')) { closeDrawer(); return; }
+    if (!wrap.hidden) {
+      const ask = modal._guard && modal._guard();
+      if (ask) { confirmBox(ask, '예', closeModal, '아니오'); return; }
+      closeModal(); return;
+    }
+    if (state.screen !== 'calendar') { if (window.Ext && Ext.back(state.screen)) return; setScreen('calendar'); return; }
+    if (state.view === 'week') showMonth();
+  }
+  const CapApp = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  let guarded = false, skipPop = false, hb = null;
+  function syncBack() {
+    if (CapApp) return;
+    clearTimeout(hb);
+    hb = setTimeout(() => {
+      const root = isRoot();
+      if (!root && !guarded) { history.pushState({ back: 1 }, ''); guarded = true; }
+      else if (root && guarded) { guarded = false; skipPop = true; history.back(); }
+    }, 0);
+  }
+  if (CapApp) CapApp.addListener('backButton', () => { if (isRoot()) CapApp.exitApp(); else goBack(); });
+  else addEventListener('popstate', () => { if (skipPop) { skipPop = false; return; } guarded = false; goBack(); syncBack(); });
 
   function toast(msg, action, fn) {
     const t = $('#toast');
@@ -353,7 +409,7 @@
       const subs = S.cats[it.cat].subs;
       return `<div class="m-head m-head-mini">${closeBtn}</div>`
         + (!isNew && isTodo ? `<button class="btn done-btn ${it.done ? '' : 'primary'}" data-toggle-done>${it.done ? '완료 취소' : '완료로 표시'}</button>` : '')
-        + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" autocomplete="off"><span class="hint">맨 앞에 시간을 쓰면 시간 순으로 정렬돼요.</span></div>`
+        + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" autocomplete="off"></div>`
         + `<div class="field"><span class="lbl">종류</span><div class="pills"><button class="pill ${!isTodo ? 'on' : ''}" data-kind="event" style="${!isTodo ? 'background:var(--accent);color:var(--accent-text)' : ''}">일정</button><button class="pill ${isTodo ? 'on' : ''}" data-kind="todo" style="${isTodo ? `background:${S.todoColor};color:${textOn(S.todoColor)}` : ''}">할 일</button></div></div>`
         + `<div class="row2"><div class="field"><label for="f-date">${isTodo ? '날짜' : '시작일'}</label><input type="date" id="f-date" value="${it.date}"></div>`
         + (isTodo ? '' : `<div class="field"><label for="f-end">종료일 (선택)</label><input type="date" id="f-end" value="${it.endDate || ''}"></div>`) + `</div>`
@@ -399,6 +455,8 @@
         }
       };
       if (isNew) setTimeout(() => $('#f-title', m).focus(), 50);
+      const before = JSON.stringify(it);
+      m._guard = () => { if (!$('#f-title', m)) return null; readForm(m); return isNew ? '일정 등록을 취소할까요?' : (JSON.stringify(it) !== before ? '수정한 내용을 저장하지 않고 나갈까요?' : null); };
     });
   }
 
@@ -447,7 +505,7 @@
           }).join('')
           + `<div class="add-sub"><input type="text" placeholder="세부 분류 추가" data-newsub="${c}" aria-label="새 세부 분류"><button data-addsub="${c}">추가</button></div></div>`;
       }).join('')
-      + `<div class="cat-block"><div class="cat-head"><span class="preview-chip" style="background:${S.todoColor};color:${textOn(S.todoColor)}">할 일</span><span class="name"></span>${colorField(S.todoColor, 'data-todocolor')}</div><div class="hint">할 일은 분류와 상관없이 이 색으로 보여요.</div></div>`
+      + `<div class="cat-block"><div class="cat-head"><span class="preview-chip" style="background:${S.todoColor};color:${textOn(S.todoColor)}">할 일</span><span class="name"></span>${colorField(S.todoColor, 'data-todocolor')}</div></div>`
       + `<div class="m-actions"><button class="btn" data-resetcolors style="flex:1">기본색으로 되돌리기</button></div>`;
     const apply = (el, v) => {
       if (!validHex(v)) return false;
@@ -506,7 +564,7 @@
   }
 
   function openTheme() {
-    const draw = () => { const t = Store.settings.theme; return `<div class="m-head"><h2>테마</h2>${closeBtn}</div><div class="field"><span class="lbl">화면 밝기</span><div class="pills"><button class="pill ${t === 'light' ? 'on' : ''}" data-theme="light" style="${t === 'light' ? 'background:var(--accent);color:var(--accent-text)' : ''}">밝게</button><button class="pill ${t === 'dark' ? 'on' : ''}" data-theme="dark" style="${t === 'dark' ? 'background:var(--accent);color:var(--accent-text)' : ''}">어둡게</button></div></div><div class="hint">일정 색은 '분류·색상 관리'에서 바꿀 수 있어요.</div>`; };
+    const draw = () => { const t = Store.settings.theme; return `<div class="m-head"><h2>테마</h2>${closeBtn}</div><div class="field"><span class="lbl">화면 밝기</span><div class="pills"><button class="pill ${t === 'light' ? 'on' : ''}" data-theme="light" style="${t === 'light' ? 'background:var(--accent);color:var(--accent-text)' : ''}">밝게</button><button class="pill ${t === 'dark' ? 'on' : ''}" data-theme="dark" style="${t === 'dark' ? 'background:var(--accent);color:var(--accent-text)' : ''}">어둡게</button></div></div>`; };
     openModal(draw(), m => {
       m.onclick = e => { const b = e.target.closest('[data-theme]'); if (b) { Store.updateSettings(s => { s.theme = b.dataset.theme; }); render(); m.innerHTML = draw(); } };
     });
@@ -517,7 +575,7 @@
       + `<p class="hint" style="font-size:13.5px;line-height:1.6;margin:0 0 14px">지금은 일정이 이 기기에만 저장돼요. 동기화를 연결하기 전까지는 가끔 백업 파일을 받아두세요.</p>`
       + `<div class="field"><button class="btn primary" data-export>백업 파일 내려받기</button></div>`
       + `<div class="field"><label for="f-import">백업 파일 불러오기</label><input type="file" id="f-import" accept=".json,application/json"></div>`
-      + `<div class="field"><span class="lbl">불러오는 방식</span><div class="pills"><button class="pill on" data-mode="merge" style="background:var(--accent);color:var(--accent-text)">합치기</button><button class="pill" data-mode="replace">전부 바꾸기</button></div><span class="hint">합치기: 지금 일정은 두고 파일 내용을 더해요. 같은 일정은 최근 수정본이 남아요.</span></div>`, m => {
+      + `<div class="field"><span class="lbl">불러오는 방식</span><div class="pills"><button class="pill on" data-mode="merge" style="background:var(--accent);color:var(--accent-text)">합치기</button><button class="pill" data-mode="replace">전부 바꾸기</button></div></div>`, m => {
       let mode = 'merge';
       m.onclick = e => {
         if (e.target.closest('[data-export]')) {
@@ -542,8 +600,7 @@
 
   // ---------- 메뉴 ----------
   const drawer = $('#drawer'), scrim = $('#drawer-scrim');
-  const openDrawer = () => { drawer.classList.add('open'); scrim.classList.add('open'); renderDrawerFoot(); };
-  const closeDrawer = () => { drawer.classList.remove('open'); scrim.classList.remove('open'); };
+  const openDrawer = () => { drawer.classList.add('open'); scrim.classList.add('open'); renderDrawerFoot(); syncBack(); };
   $('#btn-menu').onclick = openDrawer;
   scrim.onclick = closeDrawer;
   drawer.addEventListener('click', e => {
@@ -597,6 +654,7 @@
     const gw = e.target.closest('[data-goweek]'); if (gw) { showWeek(gw.dataset.goweek); return; }
     const wk = e.target.closest('[data-week]'); if (wk) { showWeek(wk.dataset.week); return; }
     if (state.screen !== 'calendar') return;
+    const bx = e.target.closest('.chip.box[data-id]'); if (bx && (e.target.closest('[data-check]') || e.clientX - bx.getBoundingClientRect().left < 18)) { toggleDone(bx.dataset.id); return; }
     const c = e.target.closest('.chip[data-id]'); if (c) { openChip(c.dataset.id); return; }
     const d = e.target.closest('[data-day]'); if (d) openItem(null, { date: d.dataset.day });
   });
@@ -628,7 +686,7 @@
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
   }
 
-  window.App = { state, render, openModal, closeModal, closeBtn, toast, esc, pad, keyOf, parse, addDays, diffDays, todayKey, mondayOf, labelDate, textOn, colorOf, chipHTML, layout, openItem, openChip, setScreen, splitTitle, timeOf, WD };
+  window.App = { state, render, openModal, closeModal, closeBtn, confirm: confirmBox, choose: chooseBox, toast, esc, pad, keyOf, parse, addDays, diffDays, todayKey, mondayOf, labelDate, textOn, colorOf, chipHTML, layout, openItem, openChip, setScreen, splitTitle, timeOf, WD };
   if (window.Ext) Ext.init(App);
   render();
 
