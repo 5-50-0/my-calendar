@@ -308,7 +308,8 @@
     if (onReady) onReady(modal);
   }
   function closeModal() { wrap.hidden = true; modal.innerHTML = ''; modal._guard = null; syncBack(); }
-  wrap.addEventListener('click', e => { if (e.target === wrap) closeModal(); });
+  // 입력칸이 있는 창은 바깥을 눌러도 닫히지 않음 (쓰던 내용 보호)
+  wrap.addEventListener('click', e => { if (e.target === wrap && !modal.querySelector('input:not([type=checkbox]), textarea, select')) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !wrap.hidden) closeModal(); });
   const closeBtn = '<button class="ib" data-close aria-label="닫기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });

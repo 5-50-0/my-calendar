@@ -356,35 +356,59 @@
     const std = weeks.reduce((a, w) => a + w.std, 0), act = weeks.reduce((a, w) => a + w.act, 0);
     return { start, end, weeks, std, act };
   }
+  let flexSel = null;
+  function leaveBars(uses) {
+    const per = Array(12).fill(0); uses.forEach(u => { per[Number(u.k.slice(5, 7)) - 1] += u.amt; });
+    const max = Math.max(1, ...per);
+    return `<div class="sec-title">월별 사용</div><div class="mbars">${per.map((v, i) => `<div class="mb"><span class="mv">${v ? h1(v) : ''}</span><span class="mbar"><span style="height:${v / max * 100}%"></span></span><span class="ml">${i + 1}</span></div>`).join('')}</div>`;
+  }
+  function flexDetail(p, inModal) {
+    const rp = flexReport(p), diff = rp.std - rp.act;
+    return `<div class="${inModal ? 'm-head' : 'fx-dh'}"><h2>${rp.start.replace(/-/g, '.')} ~ ${rp.end.slice(5).replace('-', '.')} <small>${p.weeks}주</small></h2>${inModal ? A.closeBtn : ''}</div>`
+      + `<table class="fx"><thead><tr><th>주</th><th>기준</th><th>근무</th><th>52h까지</th></tr></thead><tbody>${rp.weeks.map((w, i) => `<tr class="${w.act > 52 ? 'over' : ''}"><td>${i + 1}주 <small>${w.from.slice(5).replace('-', '/')}~</small></td><td>${h1(w.std)}h</td><td>${h1(w.act)}h</td><td>${w.act > 52 ? '초과 ' + h1(w.act - 52) + 'h' : h1(52 - w.act) + 'h'}</td></tr>${w.notes.length ? `<tr class="nt"><td colspan="4">${w.notes.map(A.esc).join('<br>')}</td></tr>` : ''}`).join('')}</tbody><tfoot><tr><td>합계</td><td>${h1(rp.std)}h</td><td>${h1(rp.act)}h</td><td></td></tr></tfoot></table>`
+      + `<div class="fx-sum ${diff < 0 ? 'neg' : ''}">${diff >= 0 ? `평균 주 40시간 기준으로 <strong>${h1(diff)}시간</strong> 더 근무할 수 있어요` : `평균 주 40시간을 <strong>${h1(-diff)}시간</strong> 넘었어요. 남은 기간에 그만큼 단축해야 해요`}</div>`
+      + `<div class="m-actions" style="margin-top:16px"><button class="btn danger" data-rmflex="${p.id}">이 주기 삭제</button></div>`;
+  }
+  function removeFlex(id) {
+    A.confirm('이 탄력 주기를 삭제할까요?', '삭제', () => { Store.updateSettings(s => { s.flex = (s.flex || []).filter(x => x.id !== id); }); if (flexSel === id) flexSel = null; A.closeModal(); A.render(); });
+  }
   function renderAttend(view) {
     $('#title-text').textContent = '근태 현황';
+    const wide = innerWidth >= 900;
     const top = `<div class="att-top"><div class="pills">${pill(attTab === 'leave', 'data-tab2="leave"', '연차')}${pill(attTab === 'flex', 'data-tab2="flex"', '탄력근무')}</div><div class="yr"><button class="ib" data-yr="-1" aria-label="이전 해">‹</button><strong>${attYear}년</strong><button class="ib" data-yr="1" aria-label="다음 해">›</button></div></div>`;
     let body = '';
     if (attTab === 'leave') {
       const granted = num((S().leave || {})[attYear]);
       const uses = leaveUses(attYear);
       const used = uses.reduce((a, u) => a + u.amt, 0);
-      body = `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
+      const left = `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
         + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}"></div>`
-        + `<div class="sec-title">사용 내역</div><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty" style="padding:12px 4px">사용 내역이 없어요</div>'}</div>`
-        + ``;
+        + leaveBars(uses);
+      const right = `<div class="sec-title">사용 내역</div><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty" style="padding:12px 4px">사용 내역이 없어요</div>'}</div>`;
+      body = `<div class="att-cols"><div>${left}</div><div>${right}</div></div>`;
     } else {
       const today = A.todayKey();
       const periods = (S().flex || []).filter(p => p.start.startsWith(attYear + '-') || A.addDays(p.start, p.weeks * 7 - 1).startsWith(attYear + '-'))
         .sort((a, b) => b.start.localeCompare(a.start));
-      body = `<div class="list">${periods.length ? periods.map(p => {
+      if (wide && periods.length && !periods.some(p => p.id === flexSel)) {
+        const now = periods.find(p => today >= p.start && today <= A.addDays(p.start, p.weeks * 7 - 1));
+        flexSel = (now || periods[0]).id;
+      }
+      const list = `<div class="list">${periods.length ? periods.map(p => {
         const rp = flexReport(p), diff = rp.std - rp.act, over52 = rp.weeks.some(w => w.act > 52);
         const now = today >= rp.start && today <= rp.end;
-        return `<button class="lrow" data-flex="${p.id}"><span class="lmain"><span class="lt">${rp.start.slice(5).replace('-', '.')} ~ ${rp.end.slice(5).replace('-', '.')} <em>${p.weeks}주${now ? ' · 진행 중' : ''}</em></span><span class="ls">기준 ${h1(rp.std)}h · 근무 ${h1(rp.act)}h${over52 ? ' · 주 52시간 초과 주 있음' : ''}</span></span><span class="amt ${diff < 0 || over52 ? 'neg' : ''}">${diff >= 0 ? `+${h1(diff)}h 여유` : `${h1(-diff)}h 초과`}</span></button>`;
-      }).join('') : `<div class="empty" style="padding:24px 4px">${attYear}년에 등록된 탄력 주기가 없어요.</div>`}</div>`
-        + ``;
+        return `<button class="lrow ${wide && p.id === flexSel ? 'sel' : ''}" data-flex="${p.id}"><span class="lmain"><span class="lt">${rp.start.slice(5).replace('-', '.')} ~ ${rp.end.slice(5).replace('-', '.')} <em>${p.weeks}주${now ? ' · 진행 중' : ''}</em></span><span class="ls">기준 ${h1(rp.std)}h · 근무 ${h1(rp.act)}h${over52 ? ' · 주 52시간 초과 주 있음' : ''}</span></span><span class="amt ${diff < 0 || over52 ? 'neg' : ''}">${diff >= 0 ? `+${h1(diff)}h 여유` : `${h1(-diff)}h 초과`}</span></button>`;
+      }).join('') : `<div class="empty" style="padding:24px 4px">${attYear}년에 등록된 탄력 주기가 없어요.</div>`}</div>`;
+      const sel = wide && periods.find(p => p.id === flexSel);
+      body = wide ? `<div class="att-cols flex"><div>${list}</div><div class="fx-pane">${sel ? flexDetail(sel, false) : ''}</div></div>` : list;
     }
     view.innerHTML = `<div class="screen att">${top}${body}</div>`;
     view.onclick = e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.tab2) { attTab = b.dataset.tab2; renderAttend(view); return; }
       if (b.dataset.yr) { attYear += Number(b.dataset.yr); renderAttend(view); return; }
-      if (b.dataset.flex) openFlex(b.dataset.flex);
+      if (b.dataset.rmflex) { removeFlex(b.dataset.rmflex); return; }
+      if (b.dataset.flex) { if (innerWidth >= 900) { flexSel = b.dataset.flex; renderAttend(view); } else openFlex(b.dataset.flex); }
     };
     view.onchange = e => {
       if (e.target.id === 'lv-granted') { const v = num(e.target.value); Store.updateSettings(s => { s.leave = s.leave || {}; s.leave[attYear] = v; }); renderAttend(view); A.toast('저장했어요'); }
@@ -392,17 +416,8 @@
   }
   function openFlex(id) {
     const p = (S().flex || []).find(x => x.id === id); if (!p) return;
-    const rp = flexReport(p), diff = rp.std - rp.act;
-    A.openModal(`<div class="m-head"><h2>탄력근무 ${rp.start.replace(/-/g, '.')} ~ ${rp.end.slice(5).replace('-', '.')}</h2>${A.closeBtn}</div>`
-      + `<table class="fx"><thead><tr><th>주</th><th>기준</th><th>근무</th><th>52h까지</th></tr></thead><tbody>${rp.weeks.map((w, i) => `<tr class="${w.act > 52 ? 'over' : ''}"><td>${i + 1}주 <small>${w.from.slice(5).replace('-', '/')}~</small></td><td>${h1(w.std)}h</td><td>${h1(w.act)}h</td><td>${w.act > 52 ? '초과 ' + h1(w.act - 52) + 'h' : h1(52 - w.act) + 'h'}</td></tr>${w.notes.length ? `<tr class="nt"><td colspan="4">${w.notes.map(A.esc).join('<br>')}</td></tr>` : ''}`).join('')}</tbody><tfoot><tr><td>합계</td><td>${h1(rp.std)}h</td><td>${h1(rp.act)}h</td><td></td></tr></tfoot></table>`
-      + `<div class="fx-sum ${diff < 0 ? 'neg' : ''}">${diff >= 0 ? `평균 주 40시간 기준으로 <strong>${h1(diff)}시간</strong> 더 근무할 수 있어요` : `평균 주 40시간을 <strong>${h1(-diff)}시간</strong> 넘었어요. 남은 기간에 그만큼 단축해야 해요`}</div>`
-      + `<div class="m-actions" style="margin-top:16px"><button class="btn danger" data-rmflex style="flex:1">이 주기 삭제</button></div>`, m => {
-      m.onclick = e => {
-        if (e.target.closest('[data-rmflex]')) {
-          if (!confirm('이 탄력 주기를 삭제할까요?')) return;
-          Store.updateSettings(s => { s.flex = (s.flex || []).filter(x => x.id !== id); }); A.closeModal(); A.render();
-        }
-      };
+    A.openModal(flexDetail(p, true), m => {
+      m.onclick = e => { const b = e.target.closest('[data-rmflex]'); if (b) removeFlex(b.dataset.rmflex); };
     });
   }
   function addFlex() {
@@ -519,7 +534,7 @@
     if (f === 'free') Object.assign(base, { body: '', plans: [] });
     if (f === 'salary') {
       const prev = pagesOf(bookId).sort((a, b) => num(b.year) - num(a.year))[0];
-      Object.assign(base, { date: '', year: String(prev ? num(prev.year) + 1 : new Date().getFullYear()), company: prev ? prev.company : '', rank: prev ? prev.rank : '', period: '', base: '', allow: '', bonus: '', gross: '', net: '' });
+      Object.assign(base, { date: '', year: String(prev ? num(prev.year) + 1 : new Date().getFullYear()), company: prev ? prev.company : '', rank: prev ? prev.rank : '', periodStart: '', periodEnd: '', base: '', allow: '', bonus: '', extras: [], gross: '', net: '' });
     }
     openPage(null, base);
   }
@@ -754,42 +769,73 @@
     });
   }
   // 연봉 (한 해 = 한 건, 세로로 입력)
-  const SAL = [['year', '연도'], ['period', '계약기간'], ['company', '회사'], ['rank', '직급'], ['base', '기본연봉'], ['allow', '고정수당'], ['bonus', '성과급'], ['gross', '원천징수 총급여'], ['net', '월 실수령액']];
+  //   계약 총액 = 기본연봉 + 고정수당 + 성과급 / 기타 지급(하계휴가비 등)은 여러 줄 / 받은 총액 = 둘의 합
   const MONEY = ['base', 'allow', 'bonus', 'gross', 'net'];
-  const salTotal = p => num(p.base) + num(p.allow) + num(p.bonus);
+  const LABEL = { year: '연도', company: '회사', rank: '직급', base: '기본연봉', allow: '고정수당', bonus: '성과급', gross: '원천징수 총급여', net: '월 실수령액' };
+  const salContract = p => num(p.base) + num(p.allow) + num(p.bonus);
+  const salExtra = p => (p.extras || []).reduce((a, x) => a + num(x.amount), 0);
   function salaryRows(bookId) {
     const list = pagesOf(bookId).filter(p => p.format === 'salary').sort((a, b) => num(a.year) - num(b.year));
-    return list.map((p, i) => { const t = salTotal(p), pv = i ? salTotal(list[i - 1]) : 0; return { p, total: t, raise: pv && t ? (t - pv) / pv * 100 : null }; });
+    return list.map((p, i) => { const c = salContract(p), x = salExtra(p), pv = i ? salContract(list[i - 1]) : 0; return { p, contract: c, extra: x, total: c + x, raise: pv && c ? (c - pv) / pv * 100 : null }; });
   }
   function salaryChart(rows) {
     const pts = rows.filter(r => r.p.year && r.total);
     if (pts.length < 2) return '';
     const W = 560, H = 190, pad = 34, max = Math.max(...pts.map(x => x.total)) * 1.12, step = (W - pad * 2) / pts.length, bw = Math.min(56, step * 0.6);
-    const bars = pts.map((x, i) => { const h = (H - 50) * x.total / max, cx = pad + step * i + step / 2; return `<rect x="${cx - bw / 2}" y="${H - 28 - h}" width="${bw}" height="${h}" rx="3" fill="var(--chart)"/><text x="${cx}" y="${H - 10}" text-anchor="middle" class="ax">${A.esc(x.p.year)}</text><text x="${cx}" y="${H - 34 - h}" text-anchor="middle" class="vl">${fmt(x.total)}</text>`; }).join('');
-    return `<figure class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 총액">${bars}<line x1="${pad / 2}" y1="${H - 28}" x2="${W - pad / 2}" y2="${H - 28}" stroke="var(--line)"/></svg></figure>`;
+    const ph = v => (H - 50) * v / max;
+    const bars = pts.map((x, i) => { const cx = pad + step * i + step / 2, hc = ph(x.contract), hx = ph(x.extra), base = H - 28;
+      return `<rect x="${cx - bw / 2}" y="${base - hc}" width="${bw}" height="${hc}" rx="2" fill="var(--chart)"/>`
+        + (x.extra ? `<rect x="${cx - bw / 2}" y="${base - hc - hx}" width="${bw}" height="${hx}" rx="2" fill="var(--chart)" opacity=".45"/>` : '')
+        + `<text x="${cx}" y="${H - 10}" text-anchor="middle" class="ax">${A.esc(x.p.year)}</text><text x="${cx}" y="${base - hc - hx - 6}" text-anchor="middle" class="vl">${fmt(x.total)}</text>`; }).join('');
+    return `<figure class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 받은 총액">${bars}<line x1="${pad / 2}" y1="${H - 28}" x2="${W - pad / 2}" y2="${H - 28}" stroke="var(--line)"/></svg></figure>`;
   }
   function salaryList(book) {
     const rows = salaryRows(book.id);
     return salaryChart(rows) + `<div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank].filter(Boolean).join(' · ');
-      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="amt">${r.total ? fmt(r.total) : '-'}</span>${r.raise != null ? `<span class="ls">${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%</span>` : ''}</span></button>`; }).join('')}</div>`;
+      const small = [r.extra ? `계약 ${fmt(r.contract)}` : '', r.raise != null ? `${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%` : ''].filter(Boolean).join(' · ');
+      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div>`;
   }
   function editSalary(p, isNew) {
-    const f = k => { const c = SAL.find(x => x[0] === k)[1]; const v = p[k] || ''; return `<div class="field"><label for="s-${k}">${c}</label><input type="text" id="s-${k}" data-k="${k}" class="s-in" value="${A.esc(MONEY.includes(k) && num(v) ? fmt(num(v)) : v)}" ${MONEY.includes(k) || k === 'year' ? 'inputmode="numeric"' : ''} autocomplete="off"></div>`; };
-    const html = `<div class="m-head"><h2>연봉</h2>${A.closeBtn}</div>`
-      + `<div class="row2">${f('year')}${f('period')}</div><div class="row2">${f('company')}${f('rank')}</div>`
+    p.extras = (p.extras || []).map(x => ({ name: x.name || '', month: x.month || '', amount: x.amount || '' }));
+    const money = v => (num(v) ? fmt(num(v)) : (v || ''));
+    const f = k => `<div class="field"><label for="s-${k}">${LABEL[k]}</label><input type="text" id="s-${k}" data-k="${k}" class="s-in" value="${A.esc(MONEY.includes(k) ? money(p[k]) : (p[k] || ''))}" ${MONEY.includes(k) || k === 'year' ? 'inputmode="numeric"' : ''} autocomplete="off"></div>`;
+    const draw = () => `<div class="m-head"><h2>연봉</h2>${A.closeBtn}</div>`
+      + `<div class="row2">${f('year')}<div class="field"></div></div>`
+      + `<div class="field"><span class="lbl">계약기간</span><div class="row2"><input type="date" id="s-ps" value="${p.periodStart || ''}" aria-label="시작"><input type="date" id="s-pe" value="${p.periodEnd || ''}" aria-label="종료"></div></div>`
+      + `<div class="row2">${f('company')}${f('rank')}</div>`
       + f('base') + `<div class="row2">${f('allow')}${f('bonus')}</div>`
-      + `<div class="sal-total"><span>총액</span><strong id="s-total"></strong></div>`
+      + `<div class="sal-total"><span>계약 총액</span><strong id="s-contract"></strong></div>`
+      + `<div class="field"><span class="lbl">기타 지급</span><div class="ex-list">${p.extras.length ? `<div class="ex-row ex-h"><span>항목</span><span>월</span><span>금액</span><span></span></div>` : ''}${p.extras.map((x, i) => `<div class="ex-row"><input type="text" class="x-name" data-i="${i}" value="${A.esc(x.name)}" aria-label="항목" autocomplete="off"><select class="x-month" data-i="${i}" aria-label="지급 월"><option value=""></option>${Array.from({ length: 12 }, (_, j) => `<option value="${j + 1}" ${Number(x.month) === j + 1 ? 'selected' : ''}>${j + 1}월</option>`).join('')}</select><input type="text" class="x-amt" data-i="${i}" value="${A.esc(money(x.amount))}" inputmode="numeric" aria-label="금액" autocomplete="off"><button class="x" data-rmx="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addx>+ 항목 추가</button></div>`
+      + (p.extras.length ? `<div class="sal-total sub"><span>기타 지급 합계</span><strong id="s-extra"></strong></div>` : '')
+      + `<div class="sal-total"><span>올해 받은 총액</span><strong id="s-total"></strong></div>`
       + f('gross') + f('net') + pageActions(isNew);
-    const read = m => $$('.s-in', m).forEach(el => { p[el.dataset.k] = el.value.trim(); });
-    A.openModal(html, m => {
-      const total = () => { read(m); const t = salTotal(p); $('#s-total', m).textContent = t ? fmt(t) + '원' : '-'; };
-      total();
-      m.oninput = e => { if (e.target.classList.contains('s-in')) total(); };
-      m.addEventListener('focusout', e => { const el = e.target; if (el.classList && el.classList.contains('s-in') && MONEY.includes(el.dataset.k) && num(el.value)) el.value = fmt(num(el.value)); });
+    const read = m => {
+      $$('.s-in', m).forEach(el => { p[el.dataset.k] = el.value.trim(); });
+      p.periodStart = $('#s-ps', m).value; p.periodEnd = $('#s-pe', m).value;
+      $$('.x-name', m).forEach(el => { const x = p.extras[el.dataset.i]; x.name = el.value.trim(); x.month = $(`.x-month[data-i="${el.dataset.i}"]`, m).value; x.amount = $(`.x-amt[data-i="${el.dataset.i}"]`, m).value.trim(); });
+    };
+    const sums = m => {
+      read(m);
+      const c = salContract(p), x = salExtra(p), w = v => (v ? fmt(v) + '원' : '-');
+      $('#s-contract', m).textContent = w(c); if ($('#s-extra', m)) $('#s-extra', m).textContent = w(x); $('#s-total', m).textContent = w(c + x);
+    };
+    A.openModal(draw(), m => {
+      sums(m);
+      const before = JSON.stringify(p);
+      m._guard = () => { if (!$('#s-year', m)) return null; read(m); return isNew || JSON.stringify(p) !== before ? '입력한 내용을 저장하지 않고 나갈까요?' : null; };
+      m.oninput = e => { if (e.target.matches('.s-in, .x-amt')) sums(m); };
+      m.onchange = e => { if (e.target.matches('.x-month')) read(m); };
+      m.addEventListener('focusout', e => { const el = e.target; if (!el.matches) return; if ((el.matches('.s-in') && MONEY.includes(el.dataset.k)) || el.matches('.x-amt')) { if (num(el.value)) el.value = fmt(num(el.value)); } });
       m.onclick = e => {
         const b = e.target.closest('button'); if (!b || b.hasAttribute('data-close')) return;
+        if (b.hasAttribute('data-addx')) { read(m); p.extras.push({ name: '', month: '', amount: '' }); m.innerHTML = draw(); sums(m); const ins = $$('.x-name', m); ins[ins.length - 1].focus(); return; }
+        if (b.dataset.rmx !== undefined) { read(m); p.extras.splice(Number(b.dataset.rmx), 1); m.innerHTML = draw(); sums(m); return; }
         if (b.hasAttribute('data-delpage')) { delPage(p); return; }
-        if (b.hasAttribute('data-savepage')) { read(m); if (!p.year) { $('#s-year', m).focus(); return; } p.title = p.year; Store.save(p); A.closeModal(); A.render(); A.toast('저장했어요'); }
+        if (b.hasAttribute('data-savepage')) {
+          read(m); if (!p.year) { $('#s-year', m).focus(); return; }
+          p.extras = p.extras.filter(x => x.name || num(x.amount));
+          p.title = p.year; Store.save(p); A.closeModal(); A.render(); A.toast('저장했어요');
+        }
       };
       if (isNew) setTimeout(() => $('#s-base', m).focus(), 50);
     });

@@ -284,7 +284,7 @@ body[data-screen="attend"] #btn-today, body[data-screen="attend"] #btn-view, bod
 .att-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .att-top .yr { display: flex; align-items: center; gap: 2px; } .att-top .yr strong { font-size: 17px; font-weight: 600; }
 .sec-title { font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
-.att { max-width: 760px; }
+.att { }
 .rules-list .lrow { padding-left: 6px; }
 body[data-screen="work"] .title-btn svg, body[data-screen="book"] .title-btn svg { display: none; }
 .screen { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 28px; }
@@ -425,3 +425,42 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .choose { display: flex; flex-direction: column; gap: 8px; }
 .choose .btn { width: 100%; }
 .choose .btn.danger { color: var(--red); }
+
+/* 연봉: 기타 지급 */
+.ex-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.ex-row { display: grid; grid-template-columns: minmax(0, 1fr) 68px 112px 26px; gap: 6px; align-items: center; }
+.ex-row.ex-h span { font-size: 11.5px; color: var(--muted); }
+.ex-row input, .ex-row select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 10px; padding: 9px 8px; font-size: 14px; }
+.ex-row .x-amt { text-align: right; }
+.ex-row .x { border: 0; background: transparent; color: var(--muted); height: 34px; }
+.sal-total.sub { padding: 2px 2px 10px; border-bottom: 0; margin-bottom: 0; }
+.sal-total.sub strong { font-size: 15px; }
+.field .row2 input[type=date] { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; font-size: 15px; color: var(--text); }
+
+/* 월별 연차 사용 */
+.mbars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; align-items: end; height: 120px; margin: 4px 0 16px; }
+.mb { display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; }
+.mv { font-size: 10.5px; color: var(--text-2); min-height: 13px; }
+.mbar { flex: 1; width: 100%; max-width: 26px; display: flex; align-items: flex-end; background: var(--line-soft); border-radius: 4px; overflow: hidden; }
+.mbar > span { display: block; width: 100%; background: var(--chart); border-radius: 4px; }
+.ml { font-size: 11px; color: var(--muted); }
+.lrow.sel { background: var(--line-soft); border-radius: 8px; }
+.fx-dh h2 { font-size: 18px; margin: 0 0 10px; } .fx-dh h2 small, .m-head h2 small { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+/* PC: 달력 외 화면은 오른쪽 빈 칸 없이 가운데 넓게 */
+@media (min-width: 700px) {
+  body:not([data-screen="calendar"]) .side { display: none; }
+  body:not([data-screen="calendar"]) .screen > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
+  body:not([data-screen="calendar"]) .screen { padding: 22px 32px 40px; }
+  .wlist { max-width: 1100px; }
+  .screen .lt { font-size: 16px; } .screen .ls { font-size: 13px; } .screen .amt { font-size: 16px; }
+  .stats strong { font-size: 26px; } .stats span { font-size: 13px; } .stats > div { padding: 16px 10px; }
+  .att-top .yr strong { font-size: 20px; }
+  table.fx { font-size: 14.5px; } table.fx th { font-size: 13px; }
+  .bk-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 22px; }
+}
+@media (min-width: 900px) {
+  .att-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .att-cols.flex { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+  .fx-pane { border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; position: sticky; top: 0; }
+}
