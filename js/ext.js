@@ -523,6 +523,8 @@
     view.innerHTML = `<div class="screen"><div class="bk-bar"><button class="btn" data-back>‹ 미니북</button></div>${body}</div>`;
     view.onclick = e => {
       if (e.target.closest('[data-back]')) { curBook = null; A.render(); return; }
+      const mt = e.target.closest('[data-metric]'); if (mt) { salMetric = mt.dataset.metric; salPick = -1; try { localStorage.setItem('mycal-salmetric', salMetric); } catch (_) {} $('#sal-chart', view).innerHTML = salaryChart(salaryRows(book.id)); return; }
+      const bar = e.target.closest('[data-bar]'); if (bar) { const i = Number(bar.dataset.bar); salPick = salPick === i ? -1 : i; $('#sal-chart', view).innerHTML = salaryChart(salaryRows(book.id)); return; }
       const p = e.target.closest('[data-page]'); if (p) openPage(p.dataset.page);
     };
   }
@@ -533,7 +535,7 @@
     if (f === 'habit') Object.assign(base, { year: new Date().getFullYear(), cat: '', sub: '', word: '', checks: {} });
     if (f === 'free') Object.assign(base, { body: '', plans: [] });
     if (f === 'salary') {
-      const prev = pagesOf(bookId).sort((a, b) => num(b.year) - num(a.year))[0];
+      const prev = pagesOf(bookId).filter(x => x.format === 'salary').sort((a, b) => salKey(b).localeCompare(salKey(a)))[0];
       Object.assign(base, { date: '', year: String(prev ? num(prev.year) + 1 : new Date().getFullYear()), company: prev ? prev.company : '', rank: prev ? prev.rank : '', periodStart: '', periodEnd: '', base: '', allow: '', bonus: '', extras: [], gross: '', net: '' });
     }
     openPage(null, base);
@@ -774,26 +776,50 @@
   const LABEL = { year: '연도', company: '회사', rank: '직급', base: '기본연봉', allow: '고정수당', bonus: '성과급', gross: '원천징수 총급여', net: '월 실수령액' };
   const salContract = p => num(p.base) + num(p.allow) + num(p.bonus);
   const salExtra = p => (p.extras || []).reduce((a, x) => a + num(x.amount), 0);
+  // 정렬: 계약 시작일 순 (없으면 연도). 같은 해에 계약이 여러 건이어도 순서대로
+  const salKey = p => p.periodStart || `${p.year || '0000'}-01-01`;
   function salaryRows(bookId) {
-    const list = pagesOf(bookId).filter(p => p.format === 'salary').sort((a, b) => num(a.year) - num(b.year));
-    return list.map((p, i) => { const c = salContract(p), x = salExtra(p), pv = i ? salContract(list[i - 1]) : 0; return { p, contract: c, extra: x, total: c + x, raise: pv && c ? (c - pv) / pv * 100 : null }; });
+    const list = pagesOf(bookId).filter(p => p.format === 'salary').sort((a, b) => salKey(a).localeCompare(salKey(b)) || (a.createdAt || '').localeCompare(b.createdAt || ''));
+    const perYear = {}; list.forEach(p => { perYear[p.year] = (perYear[p.year] || 0) + 1; });
+    return list.map((p, i) => {
+      const c = salContract(p), x = salExtra(p), pv = i ? salContract(list[i - 1]) : 0;
+      const label = perYear[p.year] > 1 && p.periodStart ? `${p.periodStart.slice(2, 4)}.${p.periodStart.slice(5, 7)}` : String(p.year || '');
+      return { p, label, contract: c, extra: x, total: c + x, gross: num(p.gross), net: num(p.net), raise: pv && c ? (c - pv) / pv * 100 : null };
+    });
   }
+  const SAL_METRICS = [['total', '받은 총액'], ['contract', '계약 총액'], ['extra', '기타 지급'], ['gross', '원천징수 총급여'], ['net', '월 실수령액'], ['raise', '인상률']];
+  let salMetric = (() => { try { return localStorage.getItem('mycal-salmetric') || 'total'; } catch (_) { return 'total'; } })();
+  let salPick = -1;
+  const won = v => v >= 1e8 ? `${+(v / 1e8).toFixed(1)}억` : v >= 1e7 && v % 1e7 === 0 ? `${v / 1e7}천만` : v >= 1e4 ? `${Math.round(v / 1e4).toLocaleString('ko-KR')}만` : String(Math.round(v));
+  function niceStep(max, n) { const raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw); }
   function salaryChart(rows) {
-    const pts = rows.filter(r => r.p.year && r.total);
-    if (pts.length < 2) return '';
-    const W = 560, H = 190, pad = 34, max = Math.max(...pts.map(x => x.total)) * 1.12, step = (W - pad * 2) / pts.length, bw = Math.min(56, step * 0.6);
-    const ph = v => (H - 50) * v / max;
-    const bars = pts.map((x, i) => { const cx = pad + step * i + step / 2, hc = ph(x.contract), hx = ph(x.extra), base = H - 28;
-      return `<rect x="${cx - bw / 2}" y="${base - hc}" width="${bw}" height="${hc}" rx="2" fill="var(--chart)"/>`
-        + (x.extra ? `<rect x="${cx - bw / 2}" y="${base - hc - hx}" width="${bw}" height="${hx}" rx="2" fill="var(--chart)" opacity=".45"/>` : '')
-        + `<text x="${cx}" y="${H - 10}" text-anchor="middle" class="ax">${A.esc(x.p.year)}</text><text x="${cx}" y="${base - hc - hx - 6}" text-anchor="middle" class="vl">${fmt(x.total)}</text>`; }).join('');
-    return `<figure class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 받은 총액">${bars}<line x1="${pad / 2}" y1="${H - 28}" x2="${W - pad / 2}" y2="${H - 28}" stroke="var(--line)"/></svg></figure>`;
+    const isPct = salMetric === 'raise';
+    const pts = rows.map((r, i) => ({ i, label: r.label, v: r[salMetric] })).filter(x => x.v != null && (isPct || x.v > 0));
+    const pills = `<div class="pills sal-metrics">${SAL_METRICS.map(([k, l]) => pill(salMetric === k, `data-metric="${k}"`, l)).join('')}</div>`;
+    if (!pts.length) return pills + `<div class="empty" style="padding:8px 2px 14px">표시할 값이 없어요</div>`;
+    const W = 420, H = 170, L = 46, R = 8, T = 14, B = 22, ph = H - T - B;
+    const vmax = Math.max(...pts.map(x => x.v), 0), vmin = Math.min(...pts.map(x => x.v), 0);
+    const step = niceStep(Math.max(vmax - vmin, isPct ? 1 : 1), 4);
+    const top = Math.ceil(vmax / step) * step || step, bot = Math.floor(vmin / step) * step;
+    const y = v => T + ph * (top - v) / (top - bot);
+    let axis = '';
+    for (let t = bot; t <= top + step / 2; t += step) axis += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line-soft)"/><text x="${L - 6}" y="${y(t) + 3.5}" text-anchor="end" class="ax">${isPct ? `${+t.toFixed(1)}%` : won(t)}</text>`;
+    const slot = (W - L - R) / pts.length, bw = Math.min(30, slot * 0.5);
+    const bars = pts.map((x, j) => {
+      const cx = L + slot * j + slot / 2, y0 = y(0), y1 = y(x.v), on = salPick === x.i;
+      const val = isPct ? `${x.v >= 0 ? '+' : ''}${x.v.toFixed(1)}%` : fmt(x.v);
+      return `<g data-bar="${x.i}" class="bar-g"><rect x="${cx - slot / 2}" y="${T}" width="${slot}" height="${ph}" fill="transparent"/><rect x="${cx - bw / 2}" y="${Math.min(y0, y1)}" width="${bw}" height="${Math.max(1, Math.abs(y1 - y0))}" rx="2" fill="var(--chart)" opacity="${salPick < 0 || on ? 1 : .45}"/>`
+        + `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="ax">${A.esc(x.label)}</text>`
+        + (on ? `<text x="${cx}" y="${Math.min(y0, y1) - 5}" text-anchor="middle" class="vl">${val}</text>` : '') + `</g>`;
+    }).join('');
+    return pills + `<figure class="chart sal-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 ${SAL_METRICS.find(m => m[0] === salMetric)[1]}">${axis}${bars}</svg></figure>`;
   }
   function salaryList(book) {
     const rows = salaryRows(book.id);
-    return `<div class="sal-wrap">` + salaryChart(rows) + `<div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank].filter(Boolean).join(' · ');
+    const per = p => p.periodStart || p.periodEnd ? `${(p.periodStart || '').slice(2).replace(/-/g, '.')}~${(p.periodEnd || '').slice(2).replace(/-/g, '.')}` : '';
+    return `<div class="sal-wrap"><div id="sal-chart">${salaryChart(rows)}</div><div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank, per(r.p)].filter(Boolean).join(' · ');
       const small = [r.extra ? `계약 ${fmt(r.contract)}` : '', r.raise != null ? `${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%` : ''].filter(Boolean).join(' · ');
-      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div></div>`;
+      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="sal-amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div></div>`;
   }
   function editSalary(p, isNew) {
     p.extras = (p.extras || []).map(x => ({ name: x.name || '', month: x.month || '', amount: x.amount || '' }));
