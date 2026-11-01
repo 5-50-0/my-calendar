@@ -791,9 +791,9 @@
   }
   function salaryList(book) {
     const rows = salaryRows(book.id);
-    return salaryChart(rows) + `<div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank].filter(Boolean).join(' · ');
+    return `<div class="sal-wrap">` + salaryChart(rows) + `<div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank].filter(Boolean).join(' · ');
       const small = [r.extra ? `계약 ${fmt(r.contract)}` : '', r.raise != null ? `${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%` : ''].filter(Boolean).join(' · ');
-      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div>`;
+      return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div></div>`;
   }
   function editSalary(p, isNew) {
     p.extras = (p.extras || []).map(x => ({ name: x.name || '', month: x.month || '', amount: x.amount || '' }));

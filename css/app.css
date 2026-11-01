@@ -380,7 +380,7 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .tbl td input, .tbl th input { width: 100px; border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 6px; font-size: 13px; }
 .tbl td input:focus, .tbl th input:focus { border-color: var(--line); background: var(--bg); }
 .tbl td.auto { color: var(--text-2); font-variant-numeric: tabular-nums; padding: 6px 8px; white-space: nowrap; }
-.chart { margin: 0 0 12px; } .chart svg { width: 100%; height: auto; }
+.chart { margin: 0 0 12px; } .chart svg { display: block; width: 100%; height: auto; max-height: 190px; }
 .chart .ax { font-size: 12px; fill: var(--muted); } .chart .vl { font-size: 11px; fill: var(--text-2); }
 .chart figcaption { font-size: 12px; color: var(--muted); text-align: center; }
 .guide { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.6; margin-bottom: 14px; }
@@ -464,3 +464,6 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
   .att-cols.flex { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
   .fx-pane { border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; position: sticky; top: 0; }
 }
+
+/* PC: 연봉 그래프는 폰과 같은 크기로 (화면 폭에 따라 커지지 않게) */
+@media (min-width: 700px) { .sal-wrap .chart { max-width: 420px; margin: 4px 0 18px; } }
