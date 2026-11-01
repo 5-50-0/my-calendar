@@ -428,7 +428,7 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 
 /* 연봉: 기타 지급 */
 .ex-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-.ex-row { display: grid; grid-template-columns: minmax(0, 1fr) 68px 112px 26px; gap: 6px; align-items: center; }
+.ex-row { display: grid; grid-template-columns: minmax(0, 1fr) 66px minmax(0, 1.2fr) 26px; gap: 6px; align-items: center; }
 .ex-row.ex-h span { font-size: 11.5px; color: var(--muted); }
 .ex-row input, .ex-row select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 10px; padding: 9px 8px; font-size: 14px; }
 .ex-row .x-amt { text-align: right; }
