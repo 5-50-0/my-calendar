@@ -121,10 +121,11 @@
       try { localStorage.setItem(KEY + '-backup-before-login', JSON.stringify(data)); } catch (e) {}
       data = blank(); changed();
     },
-    applyRemoteMeta(m) {
-      if (!m || (data.metaUpdatedAt || '') >= (m.metaUpdatedAt || '')) return false;
+    applyRemoteMeta(m, force) {
+      if (!m || (!force && (data.metaUpdatedAt || '') >= (m.metaUpdatedAt || ''))) return false;
       data.settings = Object.assign(clone(DEFAULT_SETTINGS), m.settings || {});
-      data.weekMemos = m.weekMemos || {};
+      // 처음 연결할 때(force)는 이 기기에만 있던 주간 메모도 살려 둔다
+      data.weekMemos = force ? Object.assign({}, data.weekMemos, m.weekMemos || {}) : (m.weekMemos || {});
       data.metaUpdatedAt = m.metaUpdatedAt;
       changed(); return true;
     }

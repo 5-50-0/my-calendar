@@ -53,7 +53,11 @@ async function pushAll(Store) {
     items.slice(i, i + 400).forEach(it => b.set(doc(db, 'calendars', code, 'items', it.id), strip(it)));
     await b.commit();
   }
-  await setDoc(doc(db, 'calendars', code), strip(Store.meta()), { merge: true });
+  // 설정(분류·연차·탄력·주간 메모)은 저장소에 이미 있으면 덮어쓰지 않고 받아온다
+  let remote = null;
+  try { remote = await getDocFromServer(doc(db, 'calendars', code)); } catch (e) { remote = null; }
+  if (remote && remote.exists()) { Store.applyRemoteMeta(remote.data(), true); onR(); }
+  else if (remote) await setDoc(doc(db, 'calendars', code), strip(Store.meta()), { merge: true });
 }
 
 function listen(Store, onRemote) {
