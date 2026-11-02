@@ -155,7 +155,7 @@
     const lines = Math.max(1, Math.round((rowH - ruleTop) / baseH));
     const chipH = (rowH - ruleTop) / lines;
     grid.style.setProperty('--rule-h', chipH + 'px');
-    const cap = Math.max(1, Math.floor((rowH - 34) / chipH));
+    const cap = 4; // 하루에 일정·할 일 합쳐 4개까지, 나머지는 날짜 옆 +N
 
     let html = '';
     for (let w = 0; w < weeks; w++) {
@@ -177,18 +177,13 @@
         if (d.getMonth() !== state.month) cls += ' out';
         if (d.getDay() === 0 || hol) cls += ' red'; else if (d.getDay() === 6) cls += ' sat';
         if (k === today) cls += ' today';
-        // 여러 날 줄을 위에 같은 높이로, 빈 줄은 자리만 차지
-        const rows = [];
-        lanes.forEach((_, n) => { rows[n] = null; });
-        list.forEach(e => { if (e.rs) rows[laneOf[e.it.id]] = e; });
-        const singles = list.filter(e => !e.rs);
-        const all = rows.concat(singles);
-        while (all.length && all[all.length - 1] === null) all.pop();
-        const shown = all.length > cap ? all.slice(0, cap - 1) : all;
-        const hidden = list.length - shown.filter(Boolean).length;
-        html += `<div class="${cls}" data-day="${k}"><div class="dh"><span class="dn">${d.getDate()}</span>${hol ? `<span class="hol">${esc(hol[0])}</span>` : ''}</div>`
-          + shown.map(e => (!e ? '<div class="chip gap"></div>' : e.rs ? spanHTML(e, k, mon, sun) : chipHTML(e, { box: true }))).join('')
-          + (hidden > 0 ? `<div class="more">+${hidden}</div>` : '')
+        // 여러 날 항목을 먼저(같은 주 안에서 같은 순서로), 빈 줄 없이 위로 채움
+        const multiHere = list.filter(e => e.rs).sort((a, b) => laneOf[a.it.id] - laneOf[b.it.id]);
+        const all = multiHere.concat(list.filter(e => !e.rs));
+        const shown = all.slice(0, cap);
+        const hidden = all.length - shown.length;
+        html += `<div class="${cls}" data-day="${k}"><div class="dh"><span class="dn">${d.getDate()}</span>${hidden > 0 ? `<span class="more">+${hidden}</span>` : ''}${hol ? `<span class="hol">${esc(hol[0])}</span>` : ''}</div>`
+          + shown.map(e => (e.rs ? spanHTML(e, k, mon, sun) : chipHTML(e, { box: true }))).join('')
           + `</div>`;
       }
     }
