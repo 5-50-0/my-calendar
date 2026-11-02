@@ -128,7 +128,7 @@
     document.body.dataset.screen = state.screen;
     $('#today-num').textContent = new Date().getDate();
     $$('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === state.screen));
-    if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; renderDrawerFoot(); syncBack(); return; }
+    if (state.screen !== 'calendar' && window.Ext) { Ext.renderScreen(state.screen, view); $('#side').innerHTML = ''; document.body.classList.remove('with-side'); renderDrawerFoot(); syncBack(); return; }
     view.onclick = null;
     if (state.view === 'month') renderMonth(); else renderWeek();
     renderSide();
@@ -177,6 +177,7 @@
         if (d.getMonth() !== state.month) cls += ' out';
         if (d.getDay() === 0 || hol) cls += ' red'; else if (d.getDay() === 6) cls += ' sat';
         if (k === today) cls += ' today';
+        if (k === (state.selDay || today) && sideOn()) cls += ' sel';
         // 여러 날 항목을 먼저(같은 주 안에서 같은 순서로), 빈 줄 없이 위로 채움
         const multiHere = list.filter(e => e.rs).sort((a, b) => laneOf[a.it.id] - laneOf[b.it.id]);
         const all = multiHere.concat(list.filter(e => !e.rs));
@@ -232,7 +233,25 @@
   }
 
   // 오른쪽 '오늘 일정·할 일' 칸은 쓰지 않음
-  function renderSide() { $('#side').innerHTML = ''; }
+  // PC 월간: 고른 날짜의 일정·할 일을 오른쪽에 (TimeBlocks 방식)
+  const sideOn = () => state.screen === 'calendar' && state.view === 'month' && innerWidth >= 1100;
+  const kday = k => { const d = parse(k); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
+  function renderSide() {
+    const side = $('#side');
+    document.body.classList.toggle('with-side', sideOn());
+    if (!sideOn()) { side.innerHTML = ''; return; }
+    const k = state.selDay || todayKey();
+    const d = parse(k), hol = Holidays.get(k);
+    const list = layout(k, k)[k] || [];
+    side.innerHTML = `<div class="sd-head"><div class="sd-date">${kday(k)} ${WD[d.getDay()]}</div>${hol ? `<div class="sd-hol">${esc(hol.join(' · '))}</div>` : ''}</div>`
+      + `<button class="sd-add" data-sdnew><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>생성</button>`
+      + `<div class="sd-list">${list.map(e => {
+        const it = e.it, col = colorOf(Object.assign({}, it, { kind: 'event' })), todo = it.kind === 'todo';
+        const s0 = e.rs || it.date, s1 = e.re || it.endDate || it.date;
+        const mark = todo ? `<span class="sd-cb${it.done ? ' on' : ''}" data-sdcheck="${it.id}" style="color:${col}" role="checkbox" aria-checked="${it.done ? 'true' : 'false'}" aria-label="완료"></span>` : `<span class="sd-sq" style="background:${col}"></span>`;
+        return `<div class="sd-item${todo && it.done ? ' done' : ''}" data-sdopen="${it.id}">${mark}<div class="sd-main"><div class="sd-t">${esc(it.title || '(제목 없음)')}${e.late > 0 ? ` <span class="sd-late">${e.late}일 밀림</span>` : ''}</div><div class="sd-r">${kday(s0 > s1 ? s1 : s0)} - ${kday(s1)}</div>${it.depts && it.depts.length ? `<div class="sd-r">→ ${esc(it.depts.join(', '))}</div>` : ''}</div></div>`;
+      }).join('')}</div>`;
+  }
 
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
@@ -807,9 +826,19 @@
     if (state.screen !== 'calendar') return;
     const bx = e.target.closest('.chip.box[data-id]'); if (bx && (e.target.closest('[data-check]') || (bx.querySelector('[data-check]') && e.clientX - bx.getBoundingClientRect().left < 18))) { toggleDone(bx.dataset.id); return; }
     const c = e.target.closest('.chip[data-id]'); if (c) { openChip(c.dataset.id); return; }
-    const d = e.target.closest('[data-day]'); if (d) openItem(null, { date: d.dataset.day });
+    const d = e.target.closest('[data-day]');
+    if (d) {
+      if (sideOn()) { state.selDay = d.dataset.day; $$('.day.sel').forEach(x => x.classList.remove('sel')); d.classList.add('sel'); renderSide(); return; }
+      openItem(null, { date: d.dataset.day });
+    }
   });
-  $('#side').addEventListener('click', e => { const c = e.target.closest('.chip[data-id]'); if (c) openChip(c.dataset.id); });
+  // PC: 날짜 빈 곳을 두 번 누르면 바로 등록
+  view.addEventListener('dblclick', e => { if (!sideOn() || e.target.closest('.chip')) return; const d = e.target.closest('[data-day]'); if (d) openItem(null, { date: d.dataset.day }); });
+  $('#side').addEventListener('click', e => {
+    const ck = e.target.closest('[data-sdcheck]'); if (ck) { toggleDone(ck.dataset.sdcheck); return; }
+    if (e.target.closest('[data-sdnew]')) { openItem(null, { date: state.selDay || todayKey() }); return; }
+    const o = e.target.closest('[data-sdopen]'); if (o) openChip(o.dataset.sdopen);
+  });
   view.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive: true });
   view.addEventListener('touchend', e => {
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
