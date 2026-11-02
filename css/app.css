@@ -471,11 +471,11 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 /* 연봉 그래프: 왼쪽 눈금, 막대 숫자 없음 (누르면 그 막대만) */
 .sal-metrics { margin-bottom: 8px; }
 .sal-metrics .pill { font-size: 12.5px; padding: 5px 10px; min-height: 0; }
-.sal-chart { max-width: 460px; margin: 0 auto 14px; }
-.sal-chart .ax { font-size: 10.5px; } .sal-chart .vl { font-size: 11px; }
+.sal-chart { margin: 0 0 14px; } .sal-chart svg { max-height: none; }
+.sal-chart .ax { font-size: 11px; } .sal-chart .vl { font-size: 11.5px; }
 .sal-chart .bar-g { cursor: pointer; }
 .sal-amt { font-size: 14px; font-variant-numeric: tabular-nums; }
-@media (min-width: 700px) { .screen .sal-amt { font-size: 14.5px; } .sal-metrics { justify-content: center; } }
+@media (min-width: 700px) { .screen .sal-amt { font-size: 14.5px; } }
 
 /* 관련부서 */
 .dept-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -519,7 +519,7 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
   .fx-dh h2 { font-size: 21px; } .fx-sum { font-size: 15px; }
   .fx-pane { padding: 22px 26px; }
   .mbars { height: 170px; } .mv { font-size: 12px; } .ml { font-size: 13px; } .mbar { max-width: 40px; }
-  .sal-chart { max-width: 640px; } .sal-chart .ax { font-size: 9.5px; }
+  .sal-chart .ax { font-size: 13px; } .sal-chart .vl { font-size: 13px; }
   .sal-metrics .pill { font-size: 14px; padding: 7px 13px; }
   .wrow .wt { font-size: 17px; } .wmeta { font-size: 14px; }
   .bk-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 26px; }

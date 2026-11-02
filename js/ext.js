@@ -128,15 +128,15 @@
           ? `<div class="row2"><div class="field"><label for="r-nth">몇째 주</label><select id="r-nth">${[1, 2, 3, 4, 5, -1].map(n => `<option value="${n}" ${Number(r.nth) === n ? 'selected' : ''}>${n === -1 ? '마지막' : n + '번째'}</option>`).join('')}</select></div><div class="field"><label for="r-dow">요일</label><select id="r-dow">${[1, 2, 3, 4, 5, 6, 0].map(d => `<option value="${d}" ${Number(r.dow) === d ? 'selected' : ''}>${WDN[d]}요일</option>`).join('')}</select></div></div>`
           : `<div class="field"><label for="r-mday">매월 며칠</label><select id="r-mday">${Array.from({ length: 31 }, (_, i) => `<option ${Number(r.mday) === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div>`);
       if (r.freq === 'yearly') rep = `<div class="row2"><div class="field"><label for="r-month">월</label><select id="r-month">${Array.from({ length: 12 }, (_, i) => `<option ${Number(r.month) === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div><div class="field"><label for="r-day">일</label><select id="r-day">${Array.from({ length: 31 }, (_, i) => `<option ${Number(r.day) === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div></div>`
-        + `<label class="check"><input type="checkbox" id="r-lunar" ${r.lunar ? 'checked' : ''}>음력 날짜 (음력 생일 등)</label>`;
+        + `<label class="check"><input type="checkbox" id="r-lunar" ${r.lunar ? 'checked' : ''}>음력</label>`;
       return `<div class="m-head"><h2>${isNew ? '정기업무 추가' : '정기업무 수정'}</h2>${A.closeBtn}</div>`
-        + `<div class="field"><span class="lbl">종류</span><div class="pills">${pill(r.itemKind === 'event', 'data-ik="event"', '일정')}${pill(r.itemKind === 'todo', 'data-ik="todo"', '할 일 (체크형)')}</div></div>`
+        + `<div class="field"><span class="lbl">종류</span><div class="pills">${pill(r.itemKind === 'event', 'data-ik="event"', '일정')}${pill(r.itemKind === 'todo', 'data-ik="todo"', '할 일')}</div></div>`
         + `<div class="field"><label for="r-title">제목</label><input type="text" id="r-title" value="${A.esc(r.title)}" autocomplete="off"></div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const col = cats[c].color; return pill(r.cat === c, `data-cat="${c}"`, `<span class="dot" style="background:${col}"></span>${A.esc(cats[c].name)}`, `background:${col};color:${A.textOn(col)}`); }).join('')}</div></div>`
         + `<div class="field"><label for="r-sub">세부 분류</label><select id="r-sub"><option value="">없음</option>${subs.map(s => `<option ${s === r.sub ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div>`
         + `<div class="field"><span class="lbl">반복</span><div class="pills">${[['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']].map(([f, l]) => pill(r.freq === f, `data-freq="${f}"`, l)).join('')}</div></div>`
         + rep
-        + `<div class="row2"><div class="field"><label for="r-start">시작일</label><input type="date" id="r-start" value="${r.start}"></div><div class="field"><label for="r-end">종료일 (선택)</label><input type="date" id="r-end" value="${r.end || ''}"></div></div>`
+        + `<div class="row2"><div class="field"><label for="r-start">시작일</label><input type="date" id="r-start" value="${r.start}"></div><div class="field"><label for="r-end">종료일</label><input type="date" id="r-end" value="${r.end || ''}"></div></div>`
         + A.deptHTML(r.depts)
         + `<div class="field"><label for="r-memo">세부 메모</label><textarea id="r-memo">${A.esc(r.memo || '')}</textarea></div>`
         + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
@@ -260,7 +260,7 @@
     const w = isNew ? { kind: 'work', title: '', start: A.todayKey(), end: '', status: '진행', cat: 'c', steps: [{ id: uidS(), title: '', date: '', done: false }], logs: [], result: '' } : JSON.parse(JSON.stringify(Store.item(id)));
     const draw = () => `<div class="m-head"><h2>${isNew ? '새 업무' : '업무'}</h2>${A.closeBtn}</div>`
       + `<div class="field"><label for="w-title">업무명</label><input type="text" id="w-title" value="${A.esc(w.title)}" autocomplete="off"></div>`
-      + `<div class="row2"><div class="field"><label for="w-start">시작</label><input type="date" id="w-start" value="${w.start || ''}"></div><div class="field"><label for="w-end">완료일 (선택)</label><input type="date" id="w-end" value="${w.end || ''}"></div></div>`
+      + `<div class="row2"><div class="field"><label for="w-start">시작</label><input type="date" id="w-start" value="${w.start || ''}"></div><div class="field"><label for="w-end">완료일</label><input type="date" id="w-end" value="${w.end || ''}"></div></div>`
       + `<div class="field"><span class="lbl">상태</span><div class="pills">${STATUS.map(s => pill((w.status || '진행') === s, `data-st="${s}"`, s)).join('')}</div></div>`
       + `<div class="field"><span class="lbl">단계</span><div class="steps" id="w-steps">${(w.steps || []).map((s, i) => `<div class="step ${s.done ? 'done' : ''}" data-step="${s.id}"><button class="ck ${s.done ? 'on' : ''}" data-ck="${i}" aria-label="완료">${s.done ? '✓' : i + 1}</button><input type="text" class="st-title" data-i="${i}" value="${A.esc(s.title)}" autocomplete="off"><button class="st-dl" data-pick="${i}">${s.done && s.doneDate ? s.doneDate.slice(5).replace('-', '/') + ' 완료' : s.date ? s.date.slice(5).replace('-', '/') : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-label="날짜"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>'}</button><input type="date" class="st-date" data-i="${i}" value="${s.date || ''}" tabindex="-1" aria-hidden="true"><button class="st-x" data-rm="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addstep>+ 단계 추가</button></div>`
       + `<div class="field"><span class="lbl">진행 기록</span><div class="logs">${(w.logs || []).slice().sort((a, b) => b.date.localeCompare(a.date)).map(l => `<div class="log"><span class="ld">${l.date.slice(5).replace('-', '/')}</span><span class="lx">${A.esc(l.text)}</span><button data-rmlog="${l.id}" aria-label="삭제">✕</button></div>`).join('') || '<div class="empty">기록이 없어요</div>'}</div><div class="add-sub"><input type="date" id="w-ldate" value="${A.todayKey()}" style="flex:none;width:150px"><input type="text" id="w-ltext"><button data-addlog>추가</button></div></div>`
@@ -387,7 +387,7 @@
       const uses = leaveUses(attYear);
       const used = uses.reduce((a, u) => a + u.amt, 0);
       const left = `<div class="stats"><div><span>부여</span><strong>${h1(granted)}일</strong></div><div><span>사용</span><strong>${h1(used)}일</strong></div><div><span>잔여</span><strong class="${granted - used < 0 ? 'neg' : ''}">${h1(granted - used)}일</strong></div></div>`
-        + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차 (일)</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}"></div>`
+        + `<div class="field"><label for="lv-granted">${attYear}년 부여 연차</label><input type="text" inputmode="decimal" id="lv-granted" value="${granted || ''}"></div>`
         + leaveBars(uses);
       const right = `<div class="sec-title">사용 내역</div><div class="list">${uses.length ? uses.map(u => `<div class="lrow static"><span class="lmain"><span class="lt">${u.k.replace(/-/g, '.')} (${WDN[A.parse(u.k).getDay()]})</span><span class="ls">${A.esc(u.title)}</span></span><span class="amt">${h1(u.amt)}일</span></div>`).join('') : '<div class="empty" style="padding:12px 4px">사용 내역이 없어요</div>'}</div>`;
       body = `<div class="att-cols"><div>${left}</div><div>${right}</div></div>`;
@@ -527,6 +527,8 @@
       }).join('')}</div>`;
     }
     view.innerHTML = `<div class="screen"><div class="bk-bar"><button class="btn" data-back>‹ 미니북</button></div>${body}</div>`;
+    const sc = $('#sal-chart', view);
+    if (sc && Math.abs(sc.clientWidth - salW) > 2) { salW = sc.clientWidth; sc.innerHTML = salaryChart(salaryRows(book.id)); }
     view.onclick = e => {
       if (e.target.closest('[data-back]')) { curBook = null; A.render(); return; }
       const mt = e.target.closest('[data-metric]'); if (mt) { salMetric = mt.dataset.metric; salPick = -1; try { localStorage.setItem('mycal-salmetric', salMetric); } catch (_) {} $('#sal-chart', view).innerHTML = salaryChart(salaryRows(book.id)); return; }
@@ -554,7 +556,7 @@
       + `<div class="field"><label for="b-title">이름</label><input type="text" id="b-title" value="${A.esc(b.title)}" autocomplete="off"></div>`
       + `<div class="field"><span class="lbl">종류</span>${isNew ? `<div class="pills">${Object.entries(FORMATS).map(([k, v]) => pill(b.format === k, `data-fmt="${k}"`, v)).join('')}</div>` : `<div class="fixed">${FORMATS[b.format]}</div>`}</div>`
       + `<div class="field"><span class="lbl">표지 색</span><div class="pills">${COVERS.map(c => `<button class="swatch ${b.color === c ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="색 ${c}"></button>`).join('')}</div></div>`
-      + `<div class="field"><label for="b-pin">잠금 번호 4자리 ${b.pinHash ? '(설정됨 · 바꾸려면 새로 입력)' : '(선택)'}</label><input type="password" id="b-pin" inputmode="numeric" maxlength="4" autocomplete="new-password">${b.pinHash ? '<label class="check"><input type="checkbox" id="b-nopin">잠금 해제하기</label>' : ''}</div>`
+      + `<div class="field"><label for="b-pin">잠금 번호 4자리</label><input type="password" id="b-pin" inputmode="numeric" maxlength="4" autocomplete="new-password">${b.pinHash ? '<label class="check"><input type="checkbox" id="b-nopin">잠금 해제하기</label>' : ''}</div>`
       + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
     A.openModal(draw(), m => {
       m.onclick = async e => {
@@ -652,9 +654,9 @@
     };
     const draw = () => `<div class="m-head"><h2>회의록</h2>${A.closeBtn}</div>`
       + `<div class="row2"><div class="field"><label for="p-date">날짜</label><input type="date" id="p-date" value="${p.date}"></div><div class="field"><label for="p-place">회의 장소</label><input type="text" id="p-place" value="${A.esc(p.place)}"></div></div>`
-      + `<div class="field"><label for="p-people">참석자 (부서)</label><input type="text" id="p-people" value="${A.esc(p.people)}"></div>`
+      + `<div class="field"><label for="p-people">참석자</label><input type="text" id="p-people" value="${A.esc(p.people)}"></div>`
       + `<div class="field"><label for="p-topic">회의 주제</label><input type="text" id="p-topic" value="${A.esc(p.topic)}"></div>`
-      + `<div class="field"><label for="p-item">연결할 일정 (그 날짜의 일정)</label><select id="p-item">${evOpts()}</select></div>`
+      + `<div class="field"><label for="p-item">연결할 일정</label><select id="p-item">${evOpts()}</select></div>`
       + `<div class="field"><label for="p-body">내용</label><textarea id="p-body" style="min-height:160px">${A.esc(p.body)}</textarea></div>`
       + `<div class="field"><span class="lbl">결정·협의사항</span><div class="mrows">${(p.rows || []).map((r, i) => `<div class="mrow"><div class="mrow-top"><span class="no">${i + 1}</span><input type="text" class="r-text" data-i="${i}" value="${A.esc(r.text)}" placeholder="내용"><button class="x" data-rmrow="${i}" aria-label="삭제">✕</button></div><div class="mrow-bot"><label>요청일<input type="date" class="r-req" data-i="${i}" value="${r.req || ''}"></label><label>담당<input type="text" class="r-owner" data-i="${i}" value="${A.esc(r.owner || '')}"></label><label>완료일<input type="date" class="r-done" data-i="${i}" value="${r.done || ''}"></label><label class="mine"><input type="checkbox" class="r-mine" data-i="${i}" ${r.mine ? 'checked' : ''}>내 할 일</label></div></div>`).join('')}</div><button class="btn" data-addrow>+ 항목 추가</button></div>`
       + pageActions(isNew);
@@ -804,7 +806,7 @@
   }
   const SAL_METRICS = [['total', '받은 총액'], ['contract', '계약 연봉'], ['extra', '상여'], ['gross', '원천징수 총급여'], ['net', '월 실수령액'], ['raise', '인상률']];
   let salMetric = (() => { try { return localStorage.getItem('mycal-salmetric') || 'total'; } catch (_) { return 'total'; } })();
-  let salPick = -1;
+  let salPick = -1, salW = 420; // 그래프 폭은 화면에 실제로 그려진 목록 폭에 맞춤
   const won = v => v >= 1e8 ? `${+(v / 1e8).toFixed(1)}억` : v >= 1e7 && v % 1e7 === 0 ? `${v / 1e7}천만` : v >= 1e4 ? `${Math.round(v / 1e4).toLocaleString('ko-KR')}만` : String(Math.round(v));
   function niceStep(max, n) { const raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw); }
   function salaryChart(rows) {
@@ -812,14 +814,14 @@
     const pts = rows.map((r, i) => ({ i, label: r.label, v: r[salMetric] })).filter(x => x.v != null && (isPct || x.v > 0));
     const pills = `<div class="pills sal-metrics">${SAL_METRICS.map(([k, l]) => pill(salMetric === k, `data-metric="${k}"`, l)).join('')}</div>`;
     if (!pts.length) return pills + `<div class="empty" style="padding:8px 2px 14px">표시할 값이 없어요</div>`;
-    const W = 420, H = 170, L = 46, R = 8, T = 14, B = 22, ph = H - T - B;
+    const W = Math.max(300, salW), H = W >= 700 ? 240 : 180, L = 52, R = 8, T = 16, B = 24, ph = H - T - B;
     const vmax = Math.max(...pts.map(x => x.v), 0), vmin = Math.min(...pts.map(x => x.v), 0);
     const step = niceStep(Math.max(vmax - vmin, isPct ? 1 : 1), 4);
     const top = Math.ceil(vmax / step) * step || step, bot = Math.floor(vmin / step) * step;
     const y = v => T + ph * (top - v) / (top - bot);
     let axis = '';
     for (let t = bot; t <= top + step / 2; t += step) axis += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line-soft)"/><text x="${L - 6}" y="${y(t) + 3.5}" text-anchor="end" class="ax">${isPct ? `${+t.toFixed(1)}%` : won(t)}</text>`;
-    const slot = (W - L - R) / pts.length, bw = Math.min(30, slot * 0.5);
+    const slot = (W - L - R) / pts.length, bw = Math.min(W >= 700 ? 56 : 30, slot * 0.5);
     const bars = pts.map((x, j) => {
       const cx = L + slot * j + slot / 2, y0 = y(0), y1 = y(x.v), on = salPick === x.i;
       const val = isPct ? `${x.v >= 0 ? '+' : ''}${x.v.toFixed(1)}%` : fmt(x.v);
@@ -1007,7 +1009,7 @@
         + `<div class="guide"><strong>TimeBlocks 일정 옮기는 법</strong><ol><li>TimeBlocks에서 구글 캘린더를 연동해요.</li><li>PC에서 구글 캘린더 → 설정 → 가져오기/내보내기 → <b>내보내기</b>로 받은 파일(.zip)을 풀어요.</li><li>안에 있는 <b>.ics</b> 파일을 아래에서 고르면 돼요.</li></ol></div>`
         + `<div class="field"><label for="io-cat">가져온 일정의 분류</label>${catSel('io-cat')}</div>`
         + `<div class="field"><label for="io-file">.ics 파일</label><input type="file" id="io-file" accept=".ics,text/calendar"></div>`
-        + `<div class="field" style="margin-top:22px"><label for="io-text">텍스트로 붙여넣기 (몇 개만 옮길 때)</label><span class="hint">한 줄에 하나씩, 날짜(2026-11-05 또는 11/5) 뒤에 제목</span><textarea id="io-text"></textarea><div class="row2"><select id="io-tkind"><option value="event">일정으로</option><option value="todo">할 일로</option></select>${catSel('io-tcat')}</div><button class="btn primary" data-intext style="margin-top:8px">붙여넣은 내용 가져오기</button></div>`;
+        + `<div class="field" style="margin-top:22px"><label for="io-text">텍스트로 붙여넣기</label><span class="hint">한 줄에 하나씩, 날짜(2026-11-05 또는 11/5) 뒤에 제목</span><textarea id="io-text"></textarea><div class="row2"><select id="io-tkind"><option value="event">일정으로</option><option value="todo">할 일로</option></select>${catSel('io-tcat')}</div><button class="btn primary" data-intext style="margin-top:8px">붙여넣은 내용 가져오기</button></div>`;
       return head
         + `<div class="row2"><div class="field"><label for="ex-s">시작</label><input type="date" id="ex-s" value="${y}-01-01"></div><div class="field"><label for="ex-e">끝</label><input type="date" id="ex-e" value="${y}-12-31"></div></div>`
         + `<div class="field"><span class="lbl">포함할 분류</span><div class="checks">${['k', 'c', 'p'].map(c => `<label class="check"><input type="checkbox" class="ex-c" value="${c}" checked>${A.esc(S().cats[c].name)}</label>`).join('')}<label class="check"><input type="checkbox" class="ex-c" value="todo" checked>할 일</label></div></div>`
