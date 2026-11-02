@@ -57,17 +57,19 @@
     const today = todayKey();
     Store.items().forEach(it => {
       if (it.kind !== 'todo' && it.kind !== 'event') return;
-      if (it.kind === 'todo') {
-        if (it.done) push(it.doneDate || it.date, { it, late: 0 });
-        else if (it.date >= today) push(it.date, { it, late: 0 });
-        else push(today, { it, late: diffDays(it.date, today) });
-      } else {
-        const last = it.endDate && it.endDate > it.date ? it.endDate : it.date;
+      const last = it.endDate && it.endDate > it.date ? it.endDate : it.date;
+      const range = () => {   // 시작일~종료일 매일 표시 (여러 날이면 이어 그리기용 범위 정보)
         if (last < start || it.date > end) return;
         let k = it.date < start ? start : it.date;
         const stop = last > end ? end : last;
-        while (k <= stop) { push(k, { it, late: 0 }); k = addDays(k, 1); }
-      }
+        while (k <= stop) { push(k, last > it.date ? { it, late: 0, rs: it.date, re: last } : { it, late: 0 }); k = addDays(k, 1); }
+      };
+      if (it.kind === 'todo') {
+        if (last > it.date && (it.done || last >= today)) range();          // 기간 있는 할 일
+        else if (it.done) push(it.doneDate || it.date, { it, late: 0 });
+        else if (last >= today) push(it.date, { it, late: 0 });
+        else push(today, { it, late: diffDays(last, today) });             // 종료일 지나면 오늘로 넘어오며 밀림
+      } else range();
     });
     if (window.Ext) Ext.ruleEntries(start, end).forEach(([k, e]) => push(k, e));
     Object.values(map).forEach(list => list.sort(order));
@@ -82,6 +84,22 @@
       || splitTitle(A.title)[1].localeCompare(splitTitle(B.title)[1], 'ko');
   }
 
+  const md = k => `${Number(k.slice(5, 7))}/${Number(k.slice(8))}`;
+  // 월간 여러 날 조각: piece = { k, wkStart, wkEnd }
+  function spanHTML(e, k, wkStart, wkEnd) {
+    const it = e.it, first = k === e.rs || k === wkStart, cl = k > e.rs && k !== wkStart, cr = k < e.re && k !== wkEnd;
+    const [tm, tx] = splitTitle(it.title);
+    const col = colorOf(Object.assign({}, it, { kind: 'event' }));
+    if (it.kind === 'todo') {
+      const isStart = k === e.rs, isEnd = k === e.re;
+      return `<div class="chip box tspan${it.done ? ' done' : ''}${cl ? ' cl' : ''}${cr ? ' cr' : ''}" data-id="${it.id}" style="color:${col}">`
+        + (isStart ? `<span class="cb" data-check="${it.id}" role="checkbox" aria-checked="${it.done ? 'true' : 'false'}" aria-label="완료"></span><span class="tx">${esc(tx || '(제목 없음)')}</span>` : (first ? `<span class="tx faint">${esc(tx)}</span>` : ''))
+        + `<span class="tline"></span>${isEnd ? '<span class="tarrow"></span>' : ''}</div>`;
+    }
+    const bg = colorOf(it), fg = textOn(bg);
+    return `<div class="chip ${it.cat} span${cl ? ' cl' : ''}${cr ? ' cr' : ''}" data-id="${it.id}" style="background:${bg};color:${fg}">`
+      + (first ? (tm ? `<span class="tm">${esc(tm)}</span>` : '') + `<span class="tx">${esc(tx || '(제목 없음)')}</span>` : '<span class="tx">&nbsp;</span>') + `</div>`;
+  }
   function chipHTML(e, opts = {}) {
     const it = e.it;
     const bg = colorOf(it), fg = textOn(bg);
@@ -94,6 +112,7 @@
       + (tm ? `<span class="tm">${esc(tm)}</span>` : '')
       + `<span class="tx">${esc(tx || '(제목 없음)')}</span>`
       + (e.late > 0 ? `<span class="late"><span class="lp">+</span>${e.late}<span class="lt">일 밀림</span></span>` : '')
+      + (opts.until && e.re ? `<span class="until">~${md(e.re)}</span>` : '')
       + `</div>`;
   }
 
@@ -140,7 +159,14 @@
 
     let html = '';
     for (let w = 0; w < weeks; w++) {
-      const mon = addDays(start, w * 7);
+      const mon = addDays(start, w * 7), sun = addDays(mon, 6);
+      // 이 주의 여러 날 항목: 시작 빠른 순, 긴 순으로 같은 높이 줄을 배정
+      const multi = []; const seen = new Set();
+      for (let i = 0; i < 7; i++) (map[addDays(mon, i)] || []).forEach(e => { if (e.rs && !seen.has(e.it.id)) { seen.add(e.it.id); multi.push(e); } });
+      multi.sort((a, b) => a.rs.localeCompare(b.rs) || b.re.localeCompare(a.re) || order(a, b));
+      const lanes = [];  // lanes[n] = 마지막으로 차지한 날짜
+      const laneOf = {};
+      multi.forEach(e => { const s = e.rs < mon ? mon : e.rs, en = e.re > sun ? sun : e.re; let n = lanes.findIndex(last => last < s); if (n < 0) { n = lanes.length; lanes.push(en); } else lanes[n] = en; laneOf[e.it.id] = n; });
       html += `<button class="wkno" data-week="${mon}" aria-label="${labelDate(mon)} 주간 보기">${narrow ? '' : weekTitle(mon).n + '주'}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="${narrow ? '' : 'display:none'}"><path d="M9 18l6-6-6-6"/></svg></button>`;
       for (let i = 0; i < 7; i++) {
         const k = addDays(mon, i);
@@ -151,10 +177,18 @@
         if (d.getMonth() !== state.month) cls += ' out';
         if (d.getDay() === 0 || hol) cls += ' red'; else if (d.getDay() === 6) cls += ' sat';
         if (k === today) cls += ' today';
-        const shown = list.length > cap ? list.slice(0, cap - 1) : list;
+        // 여러 날 줄을 위에 같은 높이로, 빈 줄은 자리만 차지
+        const rows = [];
+        lanes.forEach((_, n) => { rows[n] = null; });
+        list.forEach(e => { if (e.rs) rows[laneOf[e.it.id]] = e; });
+        const singles = list.filter(e => !e.rs);
+        const all = rows.concat(singles);
+        while (all.length && all[all.length - 1] === null) all.pop();
+        const shown = all.length > cap ? all.slice(0, cap - 1) : all;
+        const hidden = list.length - shown.filter(Boolean).length;
         html += `<div class="${cls}" data-day="${k}"><div class="dh"><span class="dn">${d.getDate()}</span>${hol ? `<span class="hol">${esc(hol[0])}</span>` : ''}</div>`
-          + shown.map(e => chipHTML(e, { box: true })).join('')
-          + (list.length > shown.length ? `<div class="more">+${list.length - shown.length}</div>` : '')
+          + shown.map(e => (!e ? '<div class="chip gap"></div>' : e.rs ? spanHTML(e, k, mon, sun) : chipHTML(e, { box: true }))).join('')
+          + (hidden > 0 ? `<div class="more">+${hidden}</div>` : '')
           + `</div>`;
       }
     }
@@ -191,7 +225,7 @@
       if (k === today) cls += ' today';
       const list = map[k] || [];
       return `<div class="wcol"><div class="${cls}" data-day="${k}"><span class="n">${d.getDate()}</span><span class="w">${WD[d.getDay()]}</span>${hol ? `<span class="h">${esc(hol[0])}</span>` : ''}</div>`
-        + (list.length ? list.map(e => `<div class="witem">${chipHTML(e, { noDone: true })}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">일정 없음</div>')
+        + (list.length ? list.map(e => `<div class="witem">${chipHTML(e, { noDone: true, until: true })}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">일정 없음</div>')
         + `</div>`;
     };
 
@@ -208,7 +242,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.3.4<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.3.5<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -446,7 +480,7 @@
     const hol = Holidays.get(k);
     openModal(`<div class="m-head"><h2>${labelDate(k)}</h2>${closeBtn}</div>`
       + (hol ? `<div class="hol-line">${esc(hol.join(' · '))}</div>` : '')
-      + `<div class="day-list">${list.length ? list.map(e => `<div>${chipHTML(e)}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">등록된 일정이 없어요</div>'}</div>`
+      + `<div class="day-list">${list.length ? list.map(e => `<div>${chipHTML(e, { until: true })}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">등록된 일정이 없어요</div>'}</div>`
       + `<div class="m-actions"><button class="btn primary" data-new="event">+ 추가</button></div>`
       + `<div class="m-actions"><button class="btn" style="flex:1" data-weekof="${k}">이 주 위클리 보기</button></div>`, m => {
       m.onclick = e => {
@@ -501,8 +535,8 @@
         + (!isNew && isTodo ? `<button class="btn done-btn ${it.done ? '' : 'primary'}" data-toggle-done>${it.done ? '완료 취소' : '완료로 표시'}</button>` : '')
         + `<div class="field"><label for="f-title">제목</label><input type="text" id="f-title" value="${esc(it.title)}" autocomplete="off"></div>`
         + `<div class="field"><span class="lbl">종류</span><div class="pills"><button class="pill ${!isTodo ? 'on' : ''}" data-kind="event" style="${!isTodo ? 'background:var(--accent);color:var(--accent-text)' : ''}">일정</button><button class="pill ${isTodo ? 'on' : ''}" data-kind="todo" style="${isTodo ? `background:${S.todoColor};color:${textOn(S.todoColor)}` : ''}">할 일</button></div></div>`
-        + `<div class="row2"><div class="field"><label for="f-date">${isTodo ? '날짜' : '시작일'}</label><input type="date" id="f-date" value="${it.date}"></div>`
-        + (isTodo ? '' : `<div class="field"><label for="f-end">종료일</label><input type="date" id="f-end" value="${it.endDate || ''}"></div>`) + `</div>`
+        + `<div class="row2"><div class="field"><label for="f-date">시작일</label><input type="date" id="f-date" value="${it.date}"></div>`
+        + `<div class="field"><label for="f-end">종료일</label><input type="date" id="f-end" value="${it.endDate || ''}"></div></div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const on = it.cat === c; const col = S.cats[c].color; return `<button class="pill ${on ? 'on' : ''}" data-cat="${c}" style="${on ? `background:${col};color:${textOn(col)}` : ''}"><span class="dot" style="background:${col}"></span>${esc(S.cats[c].name)}</button>`; }).join('')}</div></div>`
         + `<div class="field"><label for="f-sub">세부 분류</label><select id="f-sub"><option value="">없음</option>${subs.map(s => `<option ${s === it.sub ? 'selected' : ''}>${esc(s)}</option>`).join('')}${it.sub && !subs.includes(it.sub) ? `<option selected>${esc(it.sub)}</option>` : ''}</select></div>`
         + deptHTML(it.depts)
@@ -526,7 +560,7 @@
         if (e.target.closest('[data-close]')) return;
         if (deptClick(e, m, it, redraw)) return;
         const kb = e.target.closest('[data-kind]');
-        if (kb) { readForm(m); it.kind = kb.dataset.kind; if (it.kind === 'todo') it.endDate = ''; m.innerHTML = draw(); return; }
+        if (kb) { readForm(m); it.kind = kb.dataset.kind; m.innerHTML = draw(); return; }
         const cb = e.target.closest('[data-cat]');
         if (cb) { readForm(m); if (it.cat !== cb.dataset.cat) { it.cat = cb.dataset.cat; it.sub = ''; } m.innerHTML = draw(); return; }
         if (e.target.closest('[data-toggle-done]')) {
@@ -749,7 +783,7 @@
     const gw = e.target.closest('[data-goweek]'); if (gw) { showWeek(gw.dataset.goweek); return; }
     const wk = e.target.closest('[data-week]'); if (wk) { showWeek(wk.dataset.week); return; }
     if (state.screen !== 'calendar') return;
-    const bx = e.target.closest('.chip.box[data-id]'); if (bx && (e.target.closest('[data-check]') || e.clientX - bx.getBoundingClientRect().left < 18)) { toggleDone(bx.dataset.id); return; }
+    const bx = e.target.closest('.chip.box[data-id]'); if (bx && (e.target.closest('[data-check]') || (bx.querySelector('[data-check]') && e.clientX - bx.getBoundingClientRect().left < 18))) { toggleDone(bx.dataset.id); return; }
     const c = e.target.closest('.chip[data-id]'); if (c) { openChip(c.dataset.id); return; }
     const d = e.target.closest('[data-day]'); if (d) openItem(null, { date: d.dataset.day });
   });

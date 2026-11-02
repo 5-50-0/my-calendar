@@ -77,7 +77,7 @@ button { cursor: pointer; }
 .month { --rule-h: 16.5px; flex: 1; min-height: 0; display: grid; grid-template-columns: var(--cols); touch-action: pan-y; }
 .wkno { border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--faint); font-size: 10px; padding: 6px 0 0; display: flex; justify-content: center; align-items: flex-start; }
 .wkno:hover { color: var(--text); background: var(--line-soft); }
-.day { border-bottom: 1px solid var(--line); border-left: 1px solid var(--vline); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: calc(var(--rule-h) - 14.5px); cursor: pointer;
+.day { --padx: 2px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--vline); padding: 3px 2px; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: calc(var(--rule-h) - 14.5px); cursor: pointer;
   --rule-top: 30.5px;
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-h) - 1px), var(--rule) calc(var(--rule-h) - 1px), var(--rule) var(--rule-h));
   background-position: 0 var(--rule-top); background-repeat: repeat-x; background-size: 100% calc(100% - var(--rule-top)); background-origin: border-box; }
@@ -241,7 +241,7 @@ button { cursor: pointer; }
   .dh { min-height: 23px; }
   .hol { font-size: 8.5px; line-height: 1.1; }
   .dn { font-size: 13.5px; }
-  .day { padding: 2px 2px; --rule-top: 30.5px; }
+  .day { padding: 2px 2px; --padx: 2px; --rule-top: 30.5px; }
   .witem .chip .tm, .day-list .chip .tm { font-size: inherit; font-weight: 700; }
   .witem .chip .late, .day-list .chip .late { order: 0; margin-left: auto; font-size: 10.5px; }
   .witem .chip .late .lt, .day-list .chip .late .lt { display: inline; }
@@ -261,7 +261,7 @@ button { cursor: pointer; }
   .dn { font-size: 15px; }
   .hol { font-size: 11px; }
   .month { --rule-h: 21px; }
-  .day { padding: 4px 4px; --rule-top: 32.5px; gap: calc(var(--rule-h) - 19px); }
+  .day { padding: 4px 4px; --padx: 4px; --rule-top: 32.5px; gap: calc(var(--rule-h) - 19px); }
   .mini { display: block; }
   .week { padding: 0 18px 24px; }
   .wcols { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -537,3 +537,19 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .dt-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; }
 .dt-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 .add-sub .dt { flex: none; width: 160px; }
+
+/* 여러 날 일정·할 일: 칸을 넘어 이어 그리기 */
+.chip.gap { visibility: hidden; }
+.chip.span.cl, .chip.tspan.cl { margin-left: calc(-1 * var(--padx) - 1px); border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: calc(var(--padx) + 4px); }
+.chip.span.cr, .chip.tspan.cr { margin-right: calc(-1 * var(--padx)); border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.chip.tspan { position: relative; }
+.chip.tspan .tx { flex: none; max-width: 100%; }
+.chip.tspan .tx.faint { opacity: .7; }
+.chip.tspan .tline { flex: 1; min-width: 6px; height: 1.5px; background: currentColor; opacity: .75; margin-left: 3px; }
+.chip.tspan.cl .tline { margin-left: 0; }
+.chip.tspan .tarrow { flex: none; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid currentColor; opacity: .9; margin-right: 1px; }
+.until { flex: none; margin-left: auto; padding-left: 6px; font-size: .85em; opacity: .75; font-variant-numeric: tabular-nums; }
+/* 이어지는 막대가 칸 사이 선을 덮도록: 테두리까지 그리기 허용 */
+.day { overflow: clip; overflow-clip-margin: border-box; }
+.chip.tspan.cl { padding-left: 0; }
+.chip.tspan.cr { padding-right: 0; }
