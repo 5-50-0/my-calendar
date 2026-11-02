@@ -256,7 +256,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.4.0<br>마지막 동기화: ${window.Sync && (Sync.loggedIn || Sync.legacyCode) ? ago(Sync.lastSync) : '로그인 전'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.4.1<br>마지막 동기화: ${window.Sync && (Sync.loggedIn || Sync.legacyCode) ? ago(Sync.lastSync) : '로그인 전'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -295,6 +295,7 @@
         return `<div class="m-head"><h2>계정·동기화</h2>${closeBtn}</div>`
           + `<div class="acct"><div class="acct-mail">${esc(Sync.email)}</div><div class="acct-st">${esc(syncLabel().split(' · ').slice(1).join(' · '))} · 마지막 동기화 ${esc(ago(Sync.lastSync))}</div></div>`
           + `<div class="m-actions"><button class="btn primary" data-refresh style="flex:1">지금 동기화</button></div>`
+          + (Sync.hasBackup() ? `<div class="legacy-note" style="margin-top:12px">이 기기에 로그인 전 일정 ${Sync.hasBackup()}개가 따로 보관돼 있어요.</div><div class="m-actions"><button class="btn primary" data-restore style="flex:1">이 기기 예전 일정 되살리기</button></div>` : '')
           + (mode === 'pw'
             ? `<div class="field" style="margin-top:14px"><label for="a-cur">지금 비밀번호</label><input type="password" id="a-cur" autocomplete="current-password"></div><div class="field"><label for="a-new">새 비밀번호 (6자 이상)</label><input type="password" id="a-new" autocomplete="new-password"></div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-changepw>비밀번호 바꾸기</button></div>`
             : mode === 'import'
@@ -335,6 +336,8 @@
         }
         const rf = e.target.closest('[data-refresh]');
         if (rf) { run(rf, async () => { await Sync.refresh(); m.innerHTML = draw(); renderDrawerFoot(); toast('동기화했어요'); }); return; }
+        const rs = e.target.closest('[data-restore]');
+        if (rs) { run(rs, async () => { const n = await Sync.restoreBackup(); m.innerHTML = draw(); render(); toast(n ? `일정 ${n}개를 되살렸어요` : '이미 모두 들어 있어요'); }); return; }
         const im = e.target.closest('[data-import]');
         if (im) { const c = $('#a-code', m).value; if (!c.trim()) { $('#a-code', m).focus(); return; } run(im, async () => { const n = await Sync.importLegacy(c); mode = 'login'; m.innerHTML = draw(); render(); toast(n ? `일정 ${n}개를 가져왔어요` : '이미 모두 들어 있어요'); }); return; }
         const cp = e.target.closest('[data-changepw]');

@@ -46,14 +46,14 @@ const itemsCol = () => collection(db, ...base(), 'items');
 const metaDoc = () => doc(db, ...base());
 const markSynced = () => { try { localStorage.setItem(LAST_KEY, new Date().toISOString()); } catch (e) {} };
 
-async function pushAll() {
+async function pushAll(withMeta = true) {
   const items = S.allItems();
   for (let i = 0; i < items.length; i += 400) {
     const b = writeBatch(db);
     items.slice(i, i + 400).forEach(it => b.set(doc(db, ...base(), 'items', it.id), strip(it)));
     await b.commit();
   }
-  await setDoc(metaDoc(), strip(S.meta()), { merge: true });
+  if (withMeta) await setDoc(metaDoc(), strip(S.meta()), { merge: true });
 }
 
 function stop() { unsubs.forEach(u => u()); unsubs = []; }
@@ -77,9 +77,11 @@ function listen() {
 // 로그인 직후: 계정이 비어 있으면 이 기기 일정을 올리고(옛 코드 일정 옮기기),
 // 계정에 이미 일정이 있으면 이 기기의 옛 일정은 백업만 하고 계정 일정을 받는다.
 async function afterLogin() {
+  // 이 기기 일정은 절대 버리지 않고 계정과 합친다 (같은 일정은 최근 수정본)
   const snap = await getDocsFromServer(collection(db, 'users', user.uid, 'items'));
-  if (snap.empty) await pushAll();
-  else if (S.allItems().length) { S.resetLocal(); onRemote(); }
+  snap.forEach(d => S.applyRemoteItem(d.data()));
+  await pushAll(snap.empty);
+  onRemote();
   legacy = null; try { localStorage.removeItem(CODE_KEY); } catch (e) {}
   listen();
 }
@@ -149,6 +151,32 @@ const Sync = {
       await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPw));
       await updatePassword(user, newPw);
     } catch (e) { throw friendly(e); }
+  },
+  // 로그인할 때 따로 빼 둔 이 기기의 예전 일정 되살리기
+  hasBackup() { try { const b = JSON.parse(localStorage.getItem('mycal-data-backup-before-login') || 'null'); return b && b.items ? Object.keys(b.items).length : 0; } catch (e) { return 0; } },
+  async restoreBackup() {
+    if (!user) throw new Error('먼저 로그인해 주세요');
+    const raw = localStorage.getItem('mycal-data-backup-before-login'); if (!raw) throw new Error('되살릴 백업이 없어요');
+    const b = JSON.parse(raw); let n = 0, wb = writeBatch(db), k = 0;
+    for (const it of Object.values(b.items || {})) {
+      const cur = S.item(it.id);
+      if (!cur || (it.updatedAt || '') > (cur.updatedAt || '')) { S.applyRemoteItem(it); wb.set(doc(db, 'users', user.uid, 'items', it.id), strip(it)); n++; k++; }
+      if (k >= 400) { await wb.commit(); wb = writeBatch(db); k = 0; }
+    }
+    if (k) await wb.commit();
+    if (b.settings) {
+      // 백업에 있던 설정(분류·연차·탄력)도 비어 있는 항목만 채움
+      S.updateSettings(s => {
+        Object.keys(b.settings).forEach(key => { const v = s[key]; if (v == null || (Array.isArray(v) && !v.length) || (typeof v === 'object' && !Array.isArray(v) && !Object.keys(v).length)) s[key] = b.settings[key]; });
+        if (b.settings.flex && Array.isArray(s.flex)) { const ids = new Set(s.flex.map(x => x.id)); b.settings.flex.forEach(x => { if (!ids.has(x.id)) s.flex.push(x); }); }
+        if (b.settings.leave) s.leave = Object.assign({}, b.settings.leave, s.leave || {});
+        if (b.settings.subColors) s.subColors = Object.assign({}, b.settings.subColors, s.subColors || {});
+        if (b.settings.cats && s.cats) Object.keys(b.settings.cats).forEach(c => { if (s.cats[c] && b.settings.cats[c].subs) { const set = new Set(s.cats[c].subs); b.settings.cats[c].subs.forEach(x => { if (!set.has(x)) s.cats[c].subs.push(x); }); } });
+      });
+    }
+    if (b.weekMemos) Object.entries(b.weekMemos).forEach(([wk, t]) => { if (t && !S.weekMemo(wk)) S.setWeekMemo(wk, t); });
+    onRemote();
+    return n;
   },
   // 예전 동기화 코드에 있던 일정을 지금 계정으로 가져오기 (같은 일정은 최근 수정본이 남음)
   async importLegacy(c) {

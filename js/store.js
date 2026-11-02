@@ -118,7 +118,13 @@
     },
     // 로그인한 계정에 이미 일정이 있으면, 이 기기의 옛 일정은 백업만 해 두고 비운다
     resetLocal() {
-      try { localStorage.setItem(KEY + '-backup-before-login', JSON.stringify(data)); } catch (e) {}
+      // 예전 백업이 있으면 덮어쓰지 않고 합쳐서 보관
+      try {
+        const old = JSON.parse(localStorage.getItem(KEY + '-backup-before-login') || 'null');
+        const keep = old && old.items ? old : clone(data);
+        if (old && old.items) Object.values(data.items).forEach(it => { const c = keep.items[it.id]; if (!c || (it.updatedAt || '') > (c.updatedAt || '')) keep.items[it.id] = it; });
+        localStorage.setItem(KEY + '-backup-before-login', JSON.stringify(keep));
+      } catch (e) {}
       data = blank(); changed();
     },
     applyRemoteMeta(m, force) {
