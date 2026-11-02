@@ -249,7 +249,7 @@
         const it = e.it, col = colorOf(Object.assign({}, it, { kind: 'event' })), todo = it.kind === 'todo';
         const s0 = e.rs || it.date, s1 = e.re || it.endDate || it.date;
         const mark = todo ? `<span class="sd-cb${it.done ? ' on' : ''}" data-sdcheck="${it.id}" style="color:${col}" role="checkbox" aria-checked="${it.done ? 'true' : 'false'}" aria-label="완료"></span>` : `<span class="sd-sq" style="background:${col}"></span>`;
-        return `<div class="sd-item${todo && it.done ? ' done' : ''}" data-sdopen="${it.id}">${mark}<div class="sd-main"><div class="sd-t">${esc(it.title || '(제목 없음)')}${e.late > 0 ? ` <span class="sd-late">${e.late}일 밀림</span>` : ''}</div><div class="sd-r">${kday(s0 > s1 ? s1 : s0)} - ${kday(s1)}</div>${it.depts && it.depts.length ? `<div class="sd-r">→ ${esc(it.depts.join(', '))}</div>` : ''}</div></div>`;
+        return `<div class="sd-item${todo && it.done ? ' done' : ''}" data-sdopen="${it.id}">${mark}<div class="sd-main"><div class="sd-t">${esc(it.title || '(제목 없음)')}${e.late > 0 ? ` <span class="sd-late">${e.late}일 밀림</span>` : ''}</div>${!todo || s1 > s0 ? `<div class="sd-r">${kday(s0 > s1 ? s1 : s0)} - ${kday(s1)}</div>` : ''}${it.depts && it.depts.length ? `<div class="sd-r">→ ${esc(it.depts.join(', '))}</div>` : ''}</div></div>`;
       }).join('')}</div>`;
   }
 
