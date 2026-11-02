@@ -237,27 +237,29 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.3.5<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.4.0<br>마지막 동기화: ${window.Sync && (Sync.loggedIn || Sync.legacyCode) ? ago(Sync.lastSync) : '로그인 전'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
-    if (!window.Sync || !Sync.code) return '이 기기에만 저장 중 · 동기화 연결 전';
-    return ({ on: '동기화 연결됨', connecting: '동기화 연결 중…', offline: '오프라인 · 연결되면 자동으로 맞춰져요', error: '동기화 오류 · 동기화 코드 메뉴를 확인하세요' })[Sync.status] || '동기화 연결됨';
+    if (!window.Sync) return '이 기기에만 저장 중';
+    if (!Sync.loggedIn && !Sync.legacyCode) return '로그인 전 · 이 기기에만 저장 중';
+    const who = Sync.loggedIn ? Sync.email : '예전 동기화 코드';
+    return who + ' · ' + (({ on: '동기화됨', connecting: '동기화 중…', offline: '오프라인 · 연결되면 자동으로 맞춰져요', error: '동기화 오류' })[Sync.status] || '동기화됨');
   }
-
   const ago = iso => { if (!iso) return '-'; const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? '방금' : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : new Date(iso).toLocaleString('ko-KR'); };
+
   // 위쪽 동기화 버튼: 누르면 돌면서 동기화
   const syncBtn = $('#btn-sync');
   function paintSyncBtn() {
     if (!window.Sync) return;
-    const off = !Sync.code;
+    const off = !Sync.loggedIn && !Sync.legacyCode;
     syncBtn.classList.toggle('warn', off || Sync.status === 'error');
-    syncBtn.classList.toggle('spin', Sync.status === 'connecting' || syncBtn.classList.contains('busy'));
-    syncBtn.setAttribute('aria-label', off ? '동기화 꺼짐' : '동기화');
+    syncBtn.classList.toggle('spin', Sync.status === 'connecting');
+    syncBtn.setAttribute('aria-label', off ? '동기화 꺼짐 · 로그인' : '동기화');
   }
   syncBtn.onclick = async () => {
     if (!window.Sync) return;
-    if (!Sync.code) { openSync(); return; }
+    if (!Sync.loggedIn && !Sync.legacyCode) { openSync(); return; }
     if (syncBtn.classList.contains('busy')) return;
     syncBtn.classList.add('busy', 'spin');
     const t0 = Date.now();
@@ -266,43 +268,68 @@
     syncBtn.classList.remove('busy'); paintSyncBtn(); renderDrawerFoot();
   };
 
-  // 동기화 코드
+  // 계정·동기화
   function openSync() {
+    let mode = 'login', busy = false;
     const draw = () => {
-      if (Sync.code) {
-        return `<div class="m-head"><h2>동기화 코드</h2>${closeBtn}</div>`
-          + `<p class="hint" style="font-size:13.5px;line-height:1.6;margin:0 0 14px">이 기기는 동기화 중이에요. 다른 기기에서도 같은 코드를 넣으면 같은 일정이 보여요. 코드를 아는 사람은 일정을 볼 수 있으니 남에게 알려주지 마세요.</p>`
-          + `<div class="field"><span class="lbl">상태</span><div>${esc(syncLabel())}</div></div>`
-          + `<div class="field"><span class="lbl">내 동기화 코드</span><div class="code-box" id="code-box">${esc(Sync.code.slice(0, 4))}-••••-••••-••••-••••-${esc(Sync.code.slice(-4))}</div><button class="btn" data-show>코드 전체 보기</button></div>`
-          + `<div class="m-actions"><button class="btn primary" data-copylink>연결 링크 복사</button><button class="btn" data-copycode>코드 복사</button></div>`
-          + ``
-          + `<div class="m-actions"><button class="btn danger" data-disconnect style="flex:1">이 기기 연결 끊기</button></div>`;
+      if (Sync.loggedIn) {
+        return `<div class="m-head"><h2>계정·동기화</h2>${closeBtn}</div>`
+          + `<div class="acct"><div class="acct-mail">${esc(Sync.email)}</div><div class="acct-st">${esc(syncLabel().split(' · ').slice(1).join(' · '))} · 마지막 동기화 ${esc(ago(Sync.lastSync))}</div></div>`
+          + `<div class="m-actions"><button class="btn primary" data-refresh style="flex:1">지금 동기화</button></div>`
+          + (mode === 'pw'
+            ? `<div class="field" style="margin-top:14px"><label for="a-cur">지금 비밀번호</label><input type="password" id="a-cur" autocomplete="current-password"></div><div class="field"><label for="a-new">새 비밀번호 (6자 이상)</label><input type="password" id="a-new" autocomplete="new-password"></div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-changepw>비밀번호 바꾸기</button></div>`
+            : mode === 'import'
+            ? `<div class="field" style="margin-top:14px"><label for="a-code">예전 동기화 코드</label><input type="text" id="a-code" autocomplete="off" autocapitalize="characters"></div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-import>가져오기</button></div>`
+            : `<div class="sheet" style="margin-top:10px"><button class="sheet-btn" data-mode="import">예전 동기화 코드에서 일정 가져오기</button><button class="sheet-btn" data-mode="pw">비밀번호 바꾸기</button><button class="sheet-btn danger" data-logout>로그아웃</button></div>`);
       }
-      return `<div class="m-head"><h2>동기화 코드</h2>${closeBtn}</div>`
-        + ``
-        + `<div class="field"><span class="lbl">처음 쓰는 경우 (이 기기가 첫 기기)</span><button class="btn primary" data-new>새 동기화 코드 만들기</button></div>`
-        + `<div class="field" style="margin-top:20px"><label for="f-code">다른 기기에서 이미 쓰는 경우</label><input type="text" id="f-code" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters"><button class="btn primary" data-join>이 코드로 연결</button></div>`;
+      const su = mode === 'signup';
+      return `<div class="m-head"><h2>${su ? '가입하기' : '로그인'}</h2>${closeBtn}</div>`
+        + (Sync.legacyCode ? `<div class="legacy-note">지금은 예전 동기화 코드로 연결돼 있어요. ${su ? '가입하면' : '로그인하면'} 이 기기의 일정이 계정으로 옮겨져요.</div>` : '')
+        + `<div class="field"><label for="a-mail">메일 주소</label><input type="email" id="a-mail" autocomplete="email" inputmode="email" autocapitalize="off"></div>`
+        + `<div class="field"><label for="a-pw">비밀번호${su ? ' (6자 이상)' : ''}</label><input type="password" id="a-pw" autocomplete="${su ? 'new-password' : 'current-password'}"></div>`
+        + (su ? `<div class="field"><label for="a-pw2">비밀번호 확인</label><input type="password" id="a-pw2" autocomplete="new-password"></div>` : '')
+        + `<div class="m-actions"><button class="btn primary" data-go style="flex:1">${su ? '가입하고 시작하기' : '로그인'}</button></div>`
+        + `<div class="acct-links">${su ? '<button data-mode="login">이미 가입했어요 · 로그인</button>' : '<button data-mode="signup">처음이에요 · 가입하기</button><button data-forgot>비밀번호를 잊었어요</button>'}</div>`;
     };
-    const onRemote = () => render();
-    const copy = (text, msg) => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast(msg), () => { prompt('아래 내용을 복사하세요', text); }); };
     openModal(draw(), m => {
+      const keep = () => { const el = $('#a-mail', m); return el ? el.value : ''; };
+      const redraw = () => { const mail = keep(); m.innerHTML = draw(); const el = $('#a-mail', m); if (el && mail) el.value = mail; };
+      const run = async (btn, fn) => { if (busy) return; busy = true; const t = btn.textContent; btn.textContent = '잠시만요…'; try { await fn(); } catch (e) { toast(e.message); } busy = false; if (btn.isConnected) btn.textContent = t; };
+      m.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('#a-pw, #a-pw2')) { const g = $('[data-go]', m); if (g) g.click(); } });
       m.onclick = async e => {
         if (e.target.closest('[data-close]')) return;
-        if (e.target.closest('[data-new]')) {
-          try { await Sync.connect(Store, onRemote, Sync.newCode(), { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn(); toast('동기화를 시작했어요'); } catch (err) { toast('연결하지 못했어요: ' + err.message); }
+        const md = e.target.closest('[data-mode]'); if (md) { mode = md.dataset.mode; redraw(); return; }
+        const go = e.target.closest('[data-go]');
+        if (go) {
+          const mail = $('#a-mail', m).value.trim(), pw = $('#a-pw', m).value;
+          if (!mail) { $('#a-mail', m).focus(); return; }
+          if (!pw) { $('#a-pw', m).focus(); return; }
+          if (mode === 'signup' && pw !== $('#a-pw2', m).value) { toast('비밀번호 확인이 맞지 않아요'); return; }
+          run(go, async () => { if (mode === 'signup') await Sync.signUp(mail, pw); else await Sync.signIn(mail, pw); mode = 'login'; m.innerHTML = draw(); render(); toast(Sync.email + '으로 로그인했어요'); });
           return;
         }
-        if (e.target.closest('[data-join]')) {
-          const v = $('#f-code', m).value;
-          try { await Sync.connect(Store, onRemote, v, { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn(); toast('연결했어요. 일정을 맞추는 중이에요'); } catch (err) { toast(err.message); }
+        const fg = e.target.closest('[data-forgot]');
+        if (fg) {
+          const mail = $('#a-mail', m).value.trim(); if (!mail) { toast('메일 주소를 먼저 넣어 주세요'); $('#a-mail', m).focus(); return; }
+          run(fg, async () => { await Sync.resetPassword(mail); confirmBox(`${mail}로 비밀번호 재설정 메일을 보냈어요. 메일의 링크에서 새 비밀번호를 정한 뒤 여기서 로그인해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.`, '확인', () => {}, '닫기'); });
           return;
         }
-        if (e.target.closest('[data-show]')) { $('#code-box', m).textContent = Sync.code; return; }
-        if (e.target.closest('[data-copycode]')) { copy(Sync.code, '코드를 복사했어요'); return; }
-        if (e.target.closest('[data-copylink]')) { copy(Sync.link(), '연결 링크를 복사했어요'); return; }
-        if (e.target.closest('[data-disconnect]')) {
-          if (!confirm('이 기기의 동기화를 끊을까요?\n이 기기의 일정은 그대로 남고, 다른 기기의 변경은 더 이상 받지 않아요.\n다시 연결하려면 코드가 필요하니 먼저 복사해두세요.')) return;
-          Sync.disconnect(); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn();
+        const rf = e.target.closest('[data-refresh]');
+        if (rf) { run(rf, async () => { await Sync.refresh(); m.innerHTML = draw(); renderDrawerFoot(); toast('동기화했어요'); }); return; }
+        const im = e.target.closest('[data-import]');
+        if (im) { const c = $('#a-code', m).value; if (!c.trim()) { $('#a-code', m).focus(); return; } run(im, async () => { const n = await Sync.importLegacy(c); mode = 'login'; m.innerHTML = draw(); render(); toast(n ? `일정 ${n}개를 가져왔어요` : '이미 모두 들어 있어요'); }); return; }
+        const cp = e.target.closest('[data-changepw]');
+        if (cp) {
+          const cur = $('#a-cur', m).value, nw = $('#a-new', m).value;
+          if (!cur) { $('#a-cur', m).focus(); return; }
+          if (nw.length < 6) { toast('새 비밀번호는 6자 이상이어야 해요'); $('#a-new', m).focus(); return; }
+          run(cp, async () => { await Sync.changePassword(cur, nw); mode = 'login'; m.innerHTML = draw(); toast('비밀번호를 바꿨어요'); });
+          return;
+        }
+        if (e.target.closest('[data-logout]')) {
+          confirmBox('로그아웃할까요? 이 기기에서는 일정이 지워지고, 계정에는 그대로 남아요. 다시 로그인하면 돌아와요.', '로그아웃', async () => {
+            await Sync.signOut(); Store.resetLocal(); m.innerHTML = draw(); render(); toast('로그아웃했어요');
+          });
         }
       };
     });
