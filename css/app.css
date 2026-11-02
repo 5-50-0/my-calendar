@@ -553,3 +553,6 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .day { overflow: clip; overflow-clip-margin: border-box; }
 .chip.tspan.cl { padding-left: 0; }
 .chip.tspan.cr { padding-right: 0; }
+
+/* PC·태블릿: 월간 달력 바탕 줄 없음 (폰에서만 노트 줄) */
+@media (min-width: 700px) { .day { background-image: none; } }
