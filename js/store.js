@@ -116,6 +116,11 @@
       if (cur && (cur.updatedAt || '') >= (it.updatedAt || '')) return false;
       data.items[it.id] = it; changed(); return true;
     },
+    // 로그인한 계정에 이미 일정이 있으면, 이 기기의 옛 일정은 백업만 해 두고 비운다
+    resetLocal() {
+      try { localStorage.setItem(KEY + '-backup-before-login', JSON.stringify(data)); } catch (e) {}
+      data = blank(); changed();
+    },
     applyRemoteMeta(m) {
       if (!m || (data.metaUpdatedAt || '') >= (m.metaUpdatedAt || '')) return false;
       data.settings = Object.assign(clone(DEFAULT_SETTINGS), m.settings || {});

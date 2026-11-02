@@ -3,7 +3,7 @@
 import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-  doc, setDoc, collection, onSnapshot, writeBatch, getDocs
+  doc, setDoc, collection, onSnapshot, writeBatch, getDocs, getDocsFromServer, getDocFromServer, waitForPendingWrites
 } from 'firebase/firestore';
 
 const config = {
@@ -16,6 +16,9 @@ const config = {
 };
 
 const CODE_KEY = 'mycal-sync-code';
+const LAST_KEY = 'mycal-last-sync';
+const markSynced = () => { try { localStorage.setItem(LAST_KEY, new Date().toISOString()); } catch (e) {} };
+let S = null, onR = () => {};
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 헷갈리는 글자(0 O 1 I L) 제외
 
 let db = null, code = null, unsubs = [], status = 'off', statusCb = () => {};
@@ -59,6 +62,7 @@ function listen(Store, onRemote) {
     let changed = false;
     snap.docChanges().forEach(ch => { if (ch.type !== 'removed' && Store.applyRemoteItem(ch.doc.data())) changed = true; });
     setStatus(snap.metadata.fromCache ? 'offline' : 'on');
+    if (!snap.metadata.fromCache) markSynced();
     if (changed) onRemote();
   }, err => { console.error(err); setStatus('error'); }));
   unsubs.push(onSnapshot(doc(db, 'calendars', code), snap => {
@@ -74,6 +78,7 @@ const Sync = {
   clean,
   // 앱 시작 시 호출
   start(Store, onRemote) {
+    S = Store; onR = onRemote;
     Store.hook('item', it => { if (code) setDoc(doc(ensureDb(), 'calendars', code, 'items', it.id), strip(it)).catch(e => { console.error(e); setStatus('error'); }); });
     Store.hook('meta', m => { if (code) setDoc(doc(ensureDb(), 'calendars', code), strip(m), { merge: true }).catch(e => { console.error(e); setStatus('error'); }); });
     const fromLink = /[#&]sync=([A-Za-z0-9-]+)/.exec(location.hash);
@@ -100,6 +105,24 @@ const Sync = {
   disconnect() {
     unsubs.forEach(u => u()); unsubs = [];
     code = null; localStorage.removeItem(CODE_KEY); setStatus('off');
+  },
+  get lastSync() { try { return localStorage.getItem(LAST_KEY) || ''; } catch (e) { return ''; } },
+  // 동기화 버튼: 못 보낸 변경을 보내고, 서버의 최신 내용을 다시 받는다
+  async refresh() {
+    if (!code) throw new Error('동기화가 연결되어 있지 않아요');
+    setStatus('connecting');
+    try {
+      await Promise.race([waitForPendingWrites(db), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+      const [snap, m] = await Promise.all([getDocsFromServer(collection(db, 'calendars', code, 'items')), getDocFromServer(doc(db, 'calendars', code))]);
+      let changed = false;
+      snap.forEach(d => { if (S.applyRemoteItem(d.data())) changed = true; });
+      if (m.exists() && S.applyRemoteMeta(m.data())) changed = true;
+      if (changed) onR();
+      markSynced(); setStatus('on'); return true;
+    } catch (e) {
+      console.error(e); setStatus(navigator.onLine === false || e.message === 'timeout' ? 'offline' : 'error');
+      throw new Error(navigator.onLine === false ? '인터넷 연결을 확인해 주세요' : '동기화하지 못했어요. 잠시 뒤에 다시 해 주세요');
+    }
   },
   link() { return code ? `${location.origin}${location.pathname}#sync=${code}` : ''; }
 };

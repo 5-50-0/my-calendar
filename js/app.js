@@ -218,13 +218,34 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.3.1<br>마지막 저장: ${s ? new Date(s).toLocaleString('ko-KR') : '-'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.3.2<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
     if (!window.Sync || !Sync.code) return '이 기기에만 저장 중 · 동기화 연결 전';
     return ({ on: '동기화 연결됨', connecting: '동기화 연결 중…', offline: '오프라인 · 연결되면 자동으로 맞춰져요', error: '동기화 오류 · 동기화 코드 메뉴를 확인하세요' })[Sync.status] || '동기화 연결됨';
   }
+
+  const ago = iso => { if (!iso) return '-'; const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? '방금' : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : new Date(iso).toLocaleString('ko-KR'); };
+  // 위쪽 동기화 버튼: 누르면 돌면서 동기화
+  const syncBtn = $('#btn-sync');
+  function paintSyncBtn() {
+    if (!window.Sync) return;
+    const off = !Sync.code;
+    syncBtn.classList.toggle('warn', off || Sync.status === 'error');
+    syncBtn.classList.toggle('spin', Sync.status === 'connecting' || syncBtn.classList.contains('busy'));
+    syncBtn.setAttribute('aria-label', off ? '동기화 꺼짐' : '동기화');
+  }
+  syncBtn.onclick = async () => {
+    if (!window.Sync) return;
+    if (!Sync.code) { openSync(); return; }
+    if (syncBtn.classList.contains('busy')) return;
+    syncBtn.classList.add('busy', 'spin');
+    const t0 = Date.now();
+    try { await Sync.refresh(); await new Promise(r => setTimeout(r, Math.max(0, 700 - (Date.now() - t0)))); toast('동기화했어요'); }
+    catch (e) { toast(e.message); }
+    syncBtn.classList.remove('busy'); paintSyncBtn(); renderDrawerFoot();
+  };
 
   // 동기화 코드
   function openSync() {
@@ -249,12 +270,12 @@
       m.onclick = async e => {
         if (e.target.closest('[data-close]')) return;
         if (e.target.closest('[data-new]')) {
-          try { await Sync.connect(Store, onRemote, Sync.newCode(), { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); toast('동기화를 시작했어요'); } catch (err) { toast('연결하지 못했어요: ' + err.message); }
+          try { await Sync.connect(Store, onRemote, Sync.newCode(), { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn(); toast('동기화를 시작했어요'); } catch (err) { toast('연결하지 못했어요: ' + err.message); }
           return;
         }
         if (e.target.closest('[data-join]')) {
           const v = $('#f-code', m).value;
-          try { await Sync.connect(Store, onRemote, v, { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); toast('연결했어요. 일정을 맞추는 중이에요'); } catch (err) { toast(err.message); }
+          try { await Sync.connect(Store, onRemote, v, { upload: true }); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn(); toast('연결했어요. 일정을 맞추는 중이에요'); } catch (err) { toast(err.message); }
           return;
         }
         if (e.target.closest('[data-show]')) { $('#code-box', m).textContent = Sync.code; return; }
@@ -262,7 +283,7 @@
         if (e.target.closest('[data-copylink]')) { copy(Sync.link(), '연결 링크를 복사했어요'); return; }
         if (e.target.closest('[data-disconnect]')) {
           if (!confirm('이 기기의 동기화를 끊을까요?\n이 기기의 일정은 그대로 남고, 다른 기기의 변경은 더 이상 받지 않아요.\n다시 연결하려면 코드가 필요하니 먼저 복사해두세요.')) return;
-          Sync.disconnect(); m.innerHTML = draw(); renderDrawerFoot();
+          Sync.disconnect(); m.innerHTML = draw(); renderDrawerFoot(); paintSyncBtn();
         }
       };
     });
@@ -735,7 +756,7 @@
   let rr;
   const remoteRender = () => { clearTimeout(rr); rr = setTimeout(render, 80); };
   if (window.Sync) {
-    Sync.onStatus(() => renderDrawerFoot());
+    Sync.onStatus(() => { renderDrawerFoot(); paintSyncBtn(); });
     Sync.start(Store, remoteRender).catch(e => console.error(e));
   }
 })();
