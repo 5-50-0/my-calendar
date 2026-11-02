@@ -502,3 +502,26 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .acct-links button { border: 0; background: transparent; color: var(--text-2); font-size: 13.5px; padding: 8px 2px; text-decoration: underline; text-underline-offset: 3px; }
 .legacy-note { font-size: 13px; line-height: 1.55; color: var(--text-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
 .field input[type=email] { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 11px 12px; font-size: 15px; outline: none; color: var(--text); }
+
+/* 큰 PC 화면(전체화면): 여백 줄이고 글자·표 키우기 */
+@media (min-width: 1200px) {
+  body:not([data-screen="calendar"]) .screen > * { max-width: 1560px; }
+  body:not([data-screen="calendar"]) .screen { padding: 26px 40px 48px; }
+  .wlist { max-width: 1560px; }
+  .screen .lt { font-size: 17px; } .screen .ls { font-size: 14px; } .screen .amt, .screen .sal-amt { font-size: 17px; }
+  .screen .lrow { min-height: 60px; padding: 13px 6px; }
+  .stats strong { font-size: 32px; } .stats span { font-size: 14px; } .stats > div { padding: 20px 12px; }
+  .att-top .pill, .filter .pill { font-size: 15px; padding: 8px 16px; }
+  .att-top .yr strong { font-size: 22px; }
+  .sec-title { font-size: 14px; }
+  table.fx { font-size: 16px; } table.fx th { font-size: 14px; } table.fx th, table.fx td { padding: 10px 6px; }
+  table.fx tr.nt td { font-size: 13px; }
+  .fx-dh h2 { font-size: 21px; } .fx-sum { font-size: 15px; }
+  .fx-pane { padding: 22px 26px; }
+  .mbars { height: 170px; } .mv { font-size: 12px; } .ml { font-size: 13px; } .mbar { max-width: 40px; }
+  .sal-chart { max-width: 640px; } .sal-chart .ax { font-size: 9.5px; }
+  .sal-metrics .pill { font-size: 14px; padding: 7px 13px; }
+  .wrow .wt { font-size: 17px; } .wmeta { font-size: 14px; }
+  .bk-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 26px; }
+  .cover .ct { font-size: 17px; }
+}

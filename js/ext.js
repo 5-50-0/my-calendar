@@ -483,6 +483,7 @@
 
   function renderBooks(view) {
     migrateSalary();
+    byKind('page').filter(p => p.format === 'salary').forEach(p => { if (salUpgrade(p)) Store.save(p); });
     const book = curBook && Store.item(curBook);
     if (book && !book.deleted) return renderBook(view, book);
     curBook = null;
@@ -541,7 +542,7 @@
     if (f === 'free') Object.assign(base, { body: '', plans: [] });
     if (f === 'salary') {
       const prev = pagesOf(bookId).filter(x => x.format === 'salary').sort((a, b) => salKey(b).localeCompare(salKey(a)))[0];
-      Object.assign(base, { date: '', year: String(prev ? num(prev.year) + 1 : new Date().getFullYear()), company: prev ? prev.company : '', rank: prev ? prev.rank : '', periodStart: '', periodEnd: '', base: '', extras: [], gross: '', net: '' });
+      Object.assign(base, { date: '', year: String(prev ? num(prev.year) + 1 : new Date().getFullYear()), company: prev ? prev.company : '', rank: prev ? prev.rank : '', periodStart: '', periodEnd: '', base: '', allow: '', extras: [], gross: '', net: '' });
     }
     openPage(null, base);
   }
@@ -777,20 +778,22 @@
   }
   // 연봉 (한 해 = 한 건, 세로로 입력)
   //   계약 총액 = 기본연봉 + 고정수당 + 성과급 / 기타 지급(하계휴가비 등)은 여러 줄 / 받은 총액 = 둘의 합
-  const MONEY = ['base', 'gross', 'net'];
-  const LABEL = { year: '연도', company: '회사', rank: '직급', base: '기본연봉', gross: '원천징수 총급여', net: '월 실수령액' };
-  const salContract = p => num(p.base); // 기본연봉 (성과급·수당은 모두 기타 지급으로)
-  // 예전에 고정수당·성과급 칸에 넣은 값은 기타 지급 줄로 옮김
+  const MONEY = ['base', 'allow', 'gross', 'net'];
+  const LABEL = { year: '연도', company: '회사', rank: '직급', base: '기본연봉', allow: '고정수당', gross: '원천징수 총급여', net: '월 실수령액' };
+  const salContract = p => num(p.base) + num(p.allow); // 계약 연봉 = 기본연봉 + 고정수당 (상여는 기타 지급)
+  const salExtra = p => (p.extras || []).reduce((a, x) => a + num(x.amount), 0);
+  // 예전 형식 정리: 성과급 칸 값은 기타 지급 줄로, 기타 지급에 옮겨 두었던 '고정수당' 줄은 다시 고정수당 칸으로
   function salUpgrade(p) {
     let ch = false; p.extras = p.extras || [];
-    [['bonus', '성과급'], ['allow', '고정수당']].forEach(([k, n]) => { if (num(p[k])) { p.extras.unshift({ name: n, month: '', amount: p[k] }); ch = true; } if (k in p) { delete p[k]; ch = true; } });
+    if (num(p.bonus)) { p.extras.unshift({ name: '성과급', month: '', amount: p.bonus }); ch = true; }
+    if ('bonus' in p) { delete p.bonus; ch = true; }
+    const i = p.extras.findIndex(x => x.name === '고정수당' && !x.month);
+    if (i >= 0 && !num(p.allow)) { p.allow = p.extras[i].amount; p.extras.splice(i, 1); ch = true; }
     return ch;
   }
-  const salExtra = p => (p.extras || []).reduce((a, x) => a + num(x.amount), 0);
   // 정렬: 계약 시작일 순 (없으면 연도). 같은 해에 계약이 여러 건이어도 순서대로
   const salKey = p => p.periodStart || `${p.year || '0000'}-01-01`;
   function salaryRows(bookId) {
-    pagesOf(bookId).filter(p => p.format === 'salary' && ('allow' in p || 'bonus' in p)).forEach(p => { if (salUpgrade(p)) Store.save(p); });
     const list = pagesOf(bookId).filter(p => p.format === 'salary').sort((a, b) => salKey(a).localeCompare(salKey(b)) || (a.createdAt || '').localeCompare(b.createdAt || ''));
     const perYear = {}; list.forEach(p => { perYear[p.year] = (perYear[p.year] || 0) + 1; });
     return list.map((p, i) => {
@@ -799,7 +802,7 @@
       return { p, label, contract: c, extra: x, total: c + x, gross: num(p.gross), net: num(p.net), raise: pv && c ? (c - pv) / pv * 100 : null };
     });
   }
-  const SAL_METRICS = [['total', '받은 총액'], ['contract', '기본연봉'], ['extra', '기타 지급'], ['gross', '원천징수 총급여'], ['net', '월 실수령액'], ['raise', '인상률']];
+  const SAL_METRICS = [['total', '받은 총액'], ['contract', '계약 연봉'], ['extra', '상여'], ['gross', '원천징수 총급여'], ['net', '월 실수령액'], ['raise', '인상률']];
   let salMetric = (() => { try { return localStorage.getItem('mycal-salmetric') || 'total'; } catch (_) { return 'total'; } })();
   let salPick = -1;
   const won = v => v >= 1e8 ? `${+(v / 1e8).toFixed(1)}억` : v >= 1e7 && v % 1e7 === 0 ? `${v / 1e7}천만` : v >= 1e4 ? `${Math.round(v / 1e4).toLocaleString('ko-KR')}만` : String(Math.round(v));
@@ -830,7 +833,7 @@
     const rows = salaryRows(book.id);
     const per = p => p.periodStart || p.periodEnd ? `${(p.periodStart || '').slice(2).replace(/-/g, '.')}~${(p.periodEnd || '').slice(2).replace(/-/g, '.')}` : '';
     return `<div class="sal-wrap"><div id="sal-chart">${salaryChart(rows)}</div><div class="list">${rows.slice().reverse().map(r => { const sub = [r.p.company, r.p.rank, per(r.p)].filter(Boolean).join(' · ');
-      const small = [r.extra ? `기본 ${fmt(r.contract)}` : '', r.raise != null ? `${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%` : ''].filter(Boolean).join(' · ');
+      const small = [r.extra ? `계약 ${fmt(r.contract)}` : '', r.raise != null ? `${r.raise >= 0 ? '+' : ''}${r.raise.toFixed(1)}%` : ''].filter(Boolean).join(' · ');
       return `<button class="lrow" data-page="${r.p.id}"><span class="lmain"><span class="lt">${A.esc(r.p.year || '연도 없음')}</span>${sub ? `<span class="ls">${A.esc(sub)}</span>` : ''}</span><span class="sal-r"><span class="sal-amt">${r.total ? fmt(r.total) : '-'}</span>${small ? `<span class="ls">${small}</span>` : ''}</span></button>`; }).join('')}</div></div>`;
   }
   function editSalary(p, isNew) {
@@ -842,9 +845,10 @@
       + `<div class="row2">${f('year')}<div class="field"></div></div>`
       + `<div class="field"><span class="lbl">계약기간</span><div class="row2"><input type="date" id="s-ps" value="${p.periodStart || ''}" aria-label="시작"><input type="date" id="s-pe" value="${p.periodEnd || ''}" aria-label="종료"></div></div>`
       + `<div class="row2">${f('company')}${f('rank')}</div>`
-      + f('base')
-      + `<div class="field"><span class="lbl">기타 지급</span><div class="ex-list">${p.extras.length ? `<div class="ex-row ex-h"><span>항목</span><span>월</span><span>금액</span><span></span></div>` : ''}${p.extras.map((x, i) => `<div class="ex-row"><input type="text" class="x-name" data-i="${i}" value="${A.esc(x.name)}" aria-label="항목" autocomplete="off"><select class="x-month" data-i="${i}" aria-label="지급 월"><option value=""></option>${Array.from({ length: 12 }, (_, j) => `<option value="${j + 1}" ${Number(x.month) === j + 1 ? 'selected' : ''}>${j + 1}월</option>`).join('')}</select><input type="text" class="x-amt" data-i="${i}" value="${A.esc(money(x.amount))}" inputmode="numeric" aria-label="금액" autocomplete="off"><button class="x" data-rmx="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addx>+ 항목 추가</button></div>`
-      + (p.extras.length ? `<div class="sal-total sub"><span>기타 지급 합계</span><strong id="s-extra"></strong></div>` : '')
+      + `<div class="row2">${f('base')}${f('allow')}</div>`
+      + `<div class="sal-total"><span>계약 연봉</span><strong id="s-contract"></strong></div>`
+      + `<div class="field"><span class="lbl">상여</span><div class="ex-list">${p.extras.length ? `<div class="ex-row ex-h"><span>항목</span><span>월</span><span>금액</span><span></span></div>` : ''}${p.extras.map((x, i) => `<div class="ex-row"><input type="text" class="x-name" data-i="${i}" value="${A.esc(x.name)}" aria-label="항목" autocomplete="off"><select class="x-month" data-i="${i}" aria-label="지급 월"><option value=""></option>${Array.from({ length: 12 }, (_, j) => `<option value="${j + 1}" ${Number(x.month) === j + 1 ? 'selected' : ''}>${j + 1}월</option>`).join('')}</select><input type="text" class="x-amt" data-i="${i}" value="${A.esc(money(x.amount))}" inputmode="numeric" aria-label="금액" autocomplete="off"><button class="x" data-rmx="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addx>+ 항목 추가</button></div>`
+      + (p.extras.length ? `<div class="sal-total sub"><span>상여 합계</span><strong id="s-extra"></strong></div>` : '')
       + `<div class="sal-total"><span>올해 받은 총액</span><strong id="s-total"></strong></div>`
       + f('gross') + f('net') + pageActions(isNew);
     const read = m => {
@@ -855,7 +859,7 @@
     const sums = m => {
       read(m);
       const c = salContract(p), x = salExtra(p), w = v => (v ? fmt(v) + '원' : '-');
-      if ($('#s-extra', m)) $('#s-extra', m).textContent = w(x); $('#s-total', m).textContent = w(c + x);
+      $('#s-contract', m).textContent = w(c); if ($('#s-extra', m)) $('#s-extra', m).textContent = w(x); $('#s-total', m).textContent = w(c + x);
     };
     A.openModal(draw(), m => {
       sums(m);
