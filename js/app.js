@@ -328,6 +328,49 @@
   const closeBtn = '<button class="ib" data-close aria-label="닫기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   modal.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
 
+  // ---------- 날짜 칸: 20261106 처럼 숫자만 쳐도 2026-11-06 으로, 옆 달력 버튼으로도 고르기 ----------
+  const fmtDigits = v => { const d = v.replace(/\D/g, '').slice(0, 8); return d.length > 6 ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d; };
+  const okDate = v => { if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; const d = new Date(v + 'T00:00:00'); return !isNaN(d) && keyOf(d) === v; };
+  const valueDesc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  function enhanceDates(root) {
+    $$('input[type=date]:not(.st-date):not(.dt-native)', root).forEach(nat => {
+      const txt = document.createElement('input');
+      txt.type = 'text'; txt.inputMode = 'numeric'; txt.autocomplete = 'off'; txt.maxLength = 10;
+      txt.id = nat.id; txt.className = nat.className + ' dt-text';
+      const raw = () => valueDesc.get.call(txt), setRaw = v => valueDesc.set.call(txt, v);
+      setRaw(nat.value);
+      // 다른 코드가 .value 를 읽으면: 올바른 날짜만, 잘못 쓴 날짜는 빈 값으로 (이상한 날짜가 저장되지 않게)
+      Object.defineProperty(txt, 'value', { get: () => (okDate(raw()) ? raw() : ''), set: v => setRaw(v || ''), configurable: true });
+      Object.keys(nat.dataset).forEach(k => { txt.dataset[k] = nat.dataset[k]; });
+      if (nat.getAttribute('aria-label')) txt.setAttribute('aria-label', nat.getAttribute('aria-label'));
+      if (nat.style.cssText) txt.style.cssText = nat.style.cssText;
+      const wrap = document.createElement('span'); wrap.className = 'dt';
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dt-btn'; btn.setAttribute('aria-label', '달력에서 고르기');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+      nat.removeAttribute('id'); Object.keys(nat.dataset).forEach(k => delete nat.dataset[k]);
+      nat.className = 'dt-native'; nat.tabIndex = -1; nat.setAttribute('aria-hidden', 'true');
+      nat.replaceWith(wrap); wrap.append(txt, btn, nat);
+      const fire = () => { txt.dispatchEvent(new Event('input', { bubbles: true })); txt.dispatchEvent(new Event('change', { bubbles: true })); };
+      txt.addEventListener('input', e => {
+        if (e.isTrusted === false && !e.inputType) return;
+        const pos = raw().length === txt.selectionStart;
+        const f = fmtDigits(raw());
+        if (f !== raw() && pos) setRaw(f);
+        txt.classList.toggle('bad', raw().length === 10 && !okDate(raw()));
+      });
+      txt.addEventListener('blur', () => { txt.classList.toggle('bad', !!raw() && !okDate(raw())); });
+      btn.addEventListener('click', e => { e.stopPropagation(); nat.value = okDate(raw()) ? raw() : ''; try { nat.showPicker(); } catch (_) { nat.focus(); nat.click(); } });
+      nat.addEventListener('change', () => { if (nat.value) { setRaw(nat.value); txt.classList.remove('bad'); fire(); } });
+    });
+  }
+  new MutationObserver(() => enhanceDates(modal)).observe(modal, { childList: true, subtree: true });
+  // 잘못 쓴 날짜가 있으면 저장하지 않고 알려 줌
+  modal.addEventListener('click', e => {
+    if (!e.target.closest('[data-save], [data-savepage], [data-addflex], [data-addlog]')) return;
+    const bad = $$('.dt-text', modal).find(el => { const v = valueDesc.get.call(el); return v && !okDate(v); });
+    if (bad) { e.stopImmediatePropagation(); e.preventDefault(); bad.classList.add('bad'); bad.focus(); toast('날짜를 확인해 주세요'); }
+  }, true);
+
   // 확인 팝업 (열린 창 위에 겹쳐 뜸)
   const cwrap = $('#confirm-wrap'), cbox = $('#confirm');
   function confirmBox(msg, okLabel, onOk, noLabel) {

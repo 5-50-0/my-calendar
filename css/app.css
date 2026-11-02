@@ -528,3 +528,12 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 
 /* 오른쪽 칸 없음 (달력 화면도 전체 폭) */
 .side, body .side { display: none !important; }
+
+/* 날짜 칸: 숫자 입력 + 달력 버튼 */
+.dt { position: relative; display: flex; align-items: center; width: 100%; min-width: 0; }
+.dt .dt-text { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 10px; padding: 11px 40px 11px 12px; font-size: 15px; outline: none; font-variant-numeric: tabular-nums; }
+.dt .dt-text:focus { border-color: var(--text-2); }
+.dt .dt-text.bad { border-color: var(--red); }
+.dt-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+.dt-native { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+.add-sub .dt { flex: none; width: 160px; }
