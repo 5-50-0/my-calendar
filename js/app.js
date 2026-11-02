@@ -191,11 +191,11 @@
       if (k === today) cls += ' today';
       const list = map[k] || [];
       return `<div class="wcol"><div class="${cls}" data-day="${k}"><span class="n">${d.getDate()}</span><span class="w">${WD[d.getDay()]}</span>${hol ? `<span class="h">${esc(hol[0])}</span>` : ''}</div>`
-        + (list.length ? list.map(e => `<div class="witem">${chipHTML(e, { noDone: true })}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">일정 없음</div>')
+        + (list.length ? list.map(e => `<div class="witem">${chipHTML(e, { noDone: true })}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">일정 없음</div>')
         + `</div>`;
     };
 
-    view.innerHTML = `<div class="week" id="week"><div class="week-top">${mini}<div class="memo-box"><label for="week-memo">이번 주 메모</label><textarea id="week-memo" placeholder="이번 주 목표나 메모">${esc(Store.weekMemo(mon))}</textarea></div></div>`
+    view.innerHTML = `<div class="week" id="week"><div class="week-top">${mini}<div class="memo-box"><label for="week-memo">이번 주 메모</label><textarea id="week-memo">${esc(Store.weekMemo(mon))}</textarea></div></div>`
       + `<div class="wcols">${[0, 1, 2, 3, 4].map(i => col(addDays(mon, i))).join('')}<div class="wkend">${col(addDays(mon, 5))}${col(sun)}</div></div></div>`;
 
     let t;
@@ -392,7 +392,7 @@
     const hol = Holidays.get(k);
     openModal(`<div class="m-head"><h2>${labelDate(k)}</h2>${closeBtn}</div>`
       + (hol ? `<div class="hol-line">${esc(hol.join(' · '))}</div>` : '')
-      + `<div class="day-list">${list.length ? list.map(e => `<div>${chipHTML(e)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">등록된 일정이 없어요</div>'}</div>`
+      + `<div class="day-list">${list.length ? list.map(e => `<div>${chipHTML(e)}${deptLine(e.it)}${e.it.memo ? `<div class="memo">${esc(e.it.memo)}</div>` : ''}</div>`).join('') : '<div class="empty">등록된 일정이 없어요</div>'}</div>`
       + `<div class="m-actions"><button class="btn primary" data-new="event">+ 추가</button></div>`
       + `<div class="m-actions"><button class="btn" style="flex:1" data-weekof="${k}">이 주 위클리 보기</button></div>`, m => {
       m.onclick = e => {
@@ -403,10 +403,42 @@
     });
   }
 
+  // ---------- 관련부서 (여러 개, 전에 쓴 이름 다시 고르기) ----------
+  function deptsUsed() {
+    const c = {};
+    Store.allItems().forEach(i => { if (!i.deleted) (i.depts || []).forEach(d => { c[d] = (c[d] || 0) + 1; }); });
+    return Object.keys(c).sort((a, b) => c[b] - c[a] || a.localeCompare(b, 'ko'));
+  }
+  function deptHTML(list) {
+    return `<div class="field"><label for="f-dept">관련부서</label>`
+      + (list.length ? `<div class="dept-chips">${list.map((d, i) => `<span class="dchip">${esc(d)}<button type="button" data-rmdept="${i}" aria-label="${esc(d)} 빼기">✕</button></span>`).join('')}</div>` : '')
+      + `<div class="dept-add"><input type="text" id="f-dept" list="dept-list" autocomplete="off"><button type="button" class="btn" data-adddept aria-label="관련부서 추가">+</button></div>`
+      + `<datalist id="dept-list">${deptsUsed().filter(d => !list.includes(d)).map(d => `<option value="${esc(d)}"></option>`).join('')}</datalist></div>`;
+  }
+  function deptPending(m, obj) {
+    const el = $('#f-dept', m); if (!el) return;
+    const v = el.value.trim(); obj.depts = obj.depts || [];
+    if (v && !obj.depts.includes(v)) obj.depts.push(v);
+    el.value = '';
+  }
+  // 창의 클릭·입력에 연결: 처리했으면 true
+  function deptClick(e, m, obj, redraw) {
+    if (e.target.closest('[data-adddept]')) { deptPending(m, obj); redraw(); setTimeout(() => { const el = $('#f-dept', m); if (el) el.focus(); }, 30); return true; }
+    const r = e.target.closest('[data-rmdept]'); if (r) { obj.depts.splice(Number(r.dataset.rmdept), 1); redraw(); return true; }
+    return false;
+  }
+  function deptKeys(m, obj, redraw) {
+    m.addEventListener('keydown', e => { if (e.target.id === 'f-dept' && e.key === 'Enter') { e.preventDefault(); if (e.target.value.trim()) { deptPending(m, obj); redraw(); setTimeout(() => { const el = $('#f-dept', m); if (el) el.focus(); }, 30); } } });
+    // 목록에서 고르면 바로 추가
+    m.addEventListener('input', e => { if (e.target.id === 'f-dept' && (e.inputType === 'insertReplacementText' || !e.inputType) && deptsUsed().includes(e.target.value.trim())) { deptPending(m, obj); redraw(); } });
+  }
+  const deptLine = it => (it.depts && it.depts.length ? `<div class="dept-line">→ ${esc(it.depts.join(', '))}</div>` : '');
+
   // 일정·할 일 편집
   function openItem(id, preset = {}) {
     const isNew = !id;
-    const it = isNew ? Object.assign({ kind: 'event', title: '', date: todayKey(), endDate: '', cat: 'c', sub: '', memo: '', done: false }, preset) : JSON.parse(JSON.stringify(Store.item(id)));
+    const it = isNew ? Object.assign({ kind: 'event', title: '', date: todayKey(), endDate: '', cat: 'c', sub: '', depts: [], memo: '', done: false }, preset) : JSON.parse(JSON.stringify(Store.item(id)));
+    it.depts = it.depts || [];
     const S = Store.settings;
     const draw = () => {
       const isTodo = it.kind === 'todo';
@@ -419,6 +451,7 @@
         + (isTodo ? '' : `<div class="field"><label for="f-end">종료일 (선택)</label><input type="date" id="f-end" value="${it.endDate || ''}"></div>`) + `</div>`
         + `<div class="field"><span class="lbl">분류</span><div class="pills">${['k', 'c', 'p'].map(c => { const on = it.cat === c; const col = S.cats[c].color; return `<button class="pill ${on ? 'on' : ''}" data-cat="${c}" style="${on ? `background:${col};color:${textOn(col)}` : ''}"><span class="dot" style="background:${col}"></span>${esc(S.cats[c].name)}</button>`; }).join('')}</div></div>`
         + `<div class="field"><label for="f-sub">세부 분류</label><select id="f-sub"><option value="">없음</option>${subs.map(s => `<option ${s === it.sub ? 'selected' : ''}>${esc(s)}</option>`).join('')}${it.sub && !subs.includes(it.sub) ? `<option selected>${esc(it.sub)}</option>` : ''}</select></div>`
+        + deptHTML(it.depts)
         + `<div class="field"><label for="f-memo">세부 메모</label><textarea id="f-memo">${esc(it.memo || '')}</textarea></div>`
         + (it.workId && Store.item(it.workId) ? `<div class="field"><span class="lbl">업무</span><button class="btn" data-openwork>${esc(Store.item(it.workId).title)} 열기</button></div>` : '')
         + (!isNew && !isTodo ? `<div class="field"><span class="lbl">회의록</span><button class="btn" data-meeting>${it.noteId && Store.item(it.noteId) && !Store.item(it.noteId).deleted ? '연결된 회의록 열기' : '이 일정으로 회의록 쓰기'}</button></div>` : '')
@@ -430,10 +463,14 @@
       const end = $('#f-end', m); if (end) it.endDate = end.value && end.value > it.date ? end.value : '';
       it.sub = $('#f-sub', m).value;
       it.memo = $('#f-memo', m).value;
+      deptPending(m, it);
     };
     openModal(draw(), m => {
+      const redraw = () => { readForm(m); m.innerHTML = draw(); };
+      deptKeys(m, it, () => { m.innerHTML = draw(); });
       m.onclick = e => {
         if (e.target.closest('[data-close]')) return;
+        if (deptClick(e, m, it, redraw)) return;
         const kb = e.target.closest('[data-kind]');
         if (kb) { readForm(m); it.kind = kb.dataset.kind; if (it.kind === 'todo') it.endDate = ''; m.innerHTML = draw(); return; }
         const cb = e.target.closest('[data-cat]');
@@ -507,7 +544,7 @@
             const sc = S.subColors[`${c}/${s}`];
             return `<div class="sub-row"><input type="text" class="sub-name" value="${esc(s)}" data-rename="${c}" data-i="${i}" aria-label="세부 분류 이름">${colorField(sc || cat.color, `data-subcolor="${c}" data-i="${i}"`)}${sc ? `<button class="x" data-subreset="${c}" data-i="${i}" aria-label="큰 분류 색으로">↺</button>` : '<span style="width:36px"></span>'}<button class="x" data-subdel="${c}" data-i="${i}" aria-label="삭제">✕</button></div>`;
           }).join('')
-          + `<div class="add-sub"><input type="text" placeholder="세부 분류 추가" data-newsub="${c}" aria-label="새 세부 분류"><button data-addsub="${c}">추가</button></div></div>`;
+          + `<div class="add-sub"><input type="text" data-newsub="${c}" aria-label="새 세부 분류"><button data-addsub="${c}">추가</button></div></div>`;
       }).join('')
       + `<div class="cat-block"><div class="cat-head"><span class="preview-chip" style="background:${S.todoColor};color:${textOn(S.todoColor)}">할 일</span><span class="name"></span>${colorField(S.todoColor, 'data-todocolor')}</div></div>`
       + `<div class="m-actions"><button class="btn" data-resetcolors style="flex:1">기본색으로 되돌리기</button></div>`;
@@ -690,7 +727,7 @@
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
   }
 
-  window.App = { state, render, openModal, closeModal, closeBtn, confirm: confirmBox, choose: chooseBox, toast, esc, pad, keyOf, parse, addDays, diffDays, todayKey, mondayOf, labelDate, textOn, colorOf, chipHTML, layout, openItem, openChip, setScreen, splitTitle, timeOf, WD };
+  window.App = { deptHTML, deptClick, deptKeys, deptPending, deptLine, state, render, openModal, closeModal, closeBtn, confirm: confirmBox, choose: chooseBox, toast, esc, pad, keyOf, parse, addDays, diffDays, todayKey, mondayOf, labelDate, textOn, colorOf, chipHTML, layout, openItem, openChip, setScreen, splitTitle, timeOf, WD };
   if (window.Ext) Ext.init(App);
   render();
 

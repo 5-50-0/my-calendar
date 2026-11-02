@@ -64,7 +64,7 @@
     return false;
   }
   function occItem(r, k) {
-    return { id: `r:${r.id}:${k}`, kind: r.itemKind, title: r.title, cat: r.cat, sub: r.sub, memo: r.memo, done: !!(r.doneMap || {})[k], ruleId: r.id, occ: k };
+    return { id: `r:${r.id}:${k}`, kind: r.itemKind, title: r.title, cat: r.cat, sub: r.sub, depts: r.depts || [], memo: r.memo, done: !!(r.doneMap || {})[k], ruleId: r.id, occ: k };
   }
   function ruleEntries(start, end) {
     const out = [], rules = byKind('rule');
@@ -137,19 +137,23 @@
         + `<div class="field"><span class="lbl">반복</span><div class="pills">${[['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']].map(([f, l]) => pill(r.freq === f, `data-freq="${f}"`, l)).join('')}</div></div>`
         + rep
         + `<div class="row2"><div class="field"><label for="r-start">시작일</label><input type="date" id="r-start" value="${r.start}"></div><div class="field"><label for="r-end">종료일 (선택)</label><input type="date" id="r-end" value="${r.end || ''}"></div></div>`
+        + A.deptHTML(r.depts)
         + `<div class="field"><label for="r-memo">세부 메모</label><textarea id="r-memo">${A.esc(r.memo || '')}</textarea></div>`
         + `<div class="m-actions">${isNew ? '' : '<button class="btn danger" data-del>삭제</button>'}<button class="btn primary" data-save>저장</button></div>`;
     };
     const read = m => {
       const v = s => { const el = $(s, m); return el ? el.value : null; };
-      r.title = v('#r-title').trim(); r.sub = v('#r-sub'); r.memo = v('#r-memo');
+      r.title = v('#r-title').trim(); r.sub = v('#r-sub'); r.memo = v('#r-memo'); A.deptPending(m, r);
       r.start = v('#r-start') || r.start; r.end = v('#r-end') || '';
       if (v('#r-mday') !== null) r.mday = Number(v('#r-mday'));
       if (v('#r-nth') !== null) { r.nth = Number(v('#r-nth')); r.dow = Number(v('#r-dow')); }
       if (v('#r-month') !== null) { r.month = Number(v('#r-month')); r.day = Number(v('#r-day')); r.lunar = $('#r-lunar', m).checked; }
     };
+    r.depts = r.depts || [];
     A.openModal(draw(), m => {
+      A.deptKeys(m, r, () => { m.innerHTML = draw(); });
       m.onclick = e => {
+        if (A.deptClick(e, m, r, () => { read(m); m.innerHTML = draw(); })) return;
         const b = e.target.closest('button'); if (!b || b.hasAttribute('data-close')) return;
         if (b.dataset.ik) { read(m); r.itemKind = b.dataset.ik; m.innerHTML = draw(); return; }
         if (b.dataset.cat) { read(m); if (r.cat !== b.dataset.cat) { r.cat = b.dataset.cat; r.sub = ''; } m.innerHTML = draw(); return; }
@@ -179,6 +183,7 @@
     const done = !!(r.doneMap || {})[k];
     A.openModal(`<div class="m-head"><h2>${A.esc(r.title)}</h2>${A.closeBtn}</div>`
       + `<div class="hint" style="margin:-6px 0 14px;font-size:13.5px">${A.labelDate(k)} · 정기업무<br>${A.esc(ruleSummary(r))}</div>`
+      + A.deptLine(r)
       + (r.memo ? `<div class="memo-view">${A.esc(r.memo)}</div>` : '')
       + (r.itemKind === 'todo' ? `<button class="btn done-btn ${done ? '' : 'primary'}" data-done>${done ? '완료 취소' : '완료로 표시'}</button>` : '')
       + `<div class="m-actions"><button class="btn" data-skip style="flex:1">이 날만 빼기</button><button class="btn" data-stop style="flex:1">이 날부터 끝내기</button></div>`
@@ -725,7 +730,7 @@
       grid += '</div>';
       return `<div class="m-head"><h2>연간 관리</h2>${A.closeBtn}</div>`
         + `<div class="row2"><div class="field"><label for="h-title">이름</label><input type="text" id="h-title" value="${A.esc(p.title)}"></div><div class="field" style="flex:0 0 110px"><label for="h-year">연도</label><input type="number" id="h-year" value="${p.year}"></div></div>`
-        + `<div class="field"><span class="lbl">달력에서 자동으로 모으기 (선택)</span><div class="row2"><select id="h-cat"><option value="">분류 전체</option>${['k', 'c', 'p'].map(c => `<option value="${c}" ${p.cat === c ? 'selected' : ''}>${A.esc(cats[c].name)}</option>`).join('')}</select><select id="h-sub"><option value="">세부 전체</option>${(p.cat ? cats[p.cat].subs : []).map(s => `<option ${p.sub === s ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div><input type="text" id="h-word" value="${A.esc(p.word || '')}" placeholder="제목에 들어간 단어" style="margin-top:8px"></div>`
+        + `<div class="field"><span class="lbl">달력에서 자동으로 모으기 (선택)</span><div class="row2"><select id="h-cat"><option value="">분류 전체</option>${['k', 'c', 'p'].map(c => `<option value="${c}" ${p.cat === c ? 'selected' : ''}>${A.esc(cats[c].name)}</option>`).join('')}</select><select id="h-sub"><option value="">세부 전체</option>${(p.cat ? cats[p.cat].subs : []).map(s => `<option ${p.sub === s ? 'selected' : ''}>${A.esc(s)}</option>`).join('')}</select></div><input type="text" id="h-word" value="${A.esc(p.word || '')}" style="margin-top:8px"></div>`
         + `<div class="hcount">${p.year}년 · <strong>${total}일</strong></div>${grid}` + pageActions(isNew);
     };
     const read = m => { p.title = $('#h-title', m).value; p.year = Number($('#h-year', m).value) || p.year; p.cat = $('#h-cat', m).value; p.sub = $('#h-sub', m).value; p.word = $('#h-word', m).value.trim(); };
@@ -744,7 +749,7 @@
     const draw = () => `<div class="m-head"><h2>메모</h2>${A.closeBtn}</div>`
       + `<div class="row2"><div class="field"><label for="f2-title">제목</label><input type="text" id="f2-title" value="${A.esc(p.title)}"></div><div class="field" style="flex:0 0 160px"><label for="f2-date">날짜</label><input type="date" id="f2-date" value="${p.date}"></div></div>`
       + `<div class="field"><label for="f2-body">내용</label><textarea id="f2-body" style="min-height:200px">${A.esc(p.body)}</textarea></div>`
-      + `<div class="field"><span class="lbl">향후 계획</span><div class="plans">${(p.plans || []).map((x, i) => `<div class="plan"><input type="date" class="pl-date" data-i="${i}" value="${x.date || ''}"><input type="text" class="pl-text" data-i="${i}" value="${A.esc(x.text)}" placeholder="할 일"><select class="pl-kind" data-i="${i}"><option value="todo" ${x.kind !== 'event' ? 'selected' : ''}>할 일</option><option value="event" ${x.kind === 'event' ? 'selected' : ''}>일정</option></select><button class="x" data-rmplan="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addplan>+ 계획 추가</button></div>`
+      + `<div class="field"><span class="lbl">향후 계획</span><div class="plans">${(p.plans || []).map((x, i) => `<div class="plan"><input type="date" class="pl-date" data-i="${i}" value="${x.date || ''}"><input type="text" class="pl-text" data-i="${i}" value="${A.esc(x.text)}"><select class="pl-kind" data-i="${i}"><option value="todo" ${x.kind !== 'event' ? 'selected' : ''}>할 일</option><option value="event" ${x.kind === 'event' ? 'selected' : ''}>일정</option></select><button class="x" data-rmplan="${i}" aria-label="삭제">✕</button></div>`).join('')}</div><button class="btn" data-addplan>+ 계획 추가</button></div>`
       + pageActions(isNew);
     const read = m => {
       p.title = $('#f2-title', m).value; p.date = $('#f2-date', m).value || p.date; p.body = $('#f2-body', m).value;

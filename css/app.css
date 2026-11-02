@@ -476,3 +476,13 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .sal-chart .bar-g { cursor: pointer; }
 .sal-amt { font-size: 14px; font-variant-numeric: tabular-nums; }
 @media (min-width: 700px) { .screen .sal-amt { font-size: 14.5px; } .sal-metrics { justify-content: center; } }
+
+/* 관련부서 */
+.dept-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dchip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 11px; font-size: 13.5px; }
+.dchip button { border: 0; background: transparent; color: var(--muted); width: 22px; height: 22px; font-size: 12px; }
+.dept-add { display: flex; gap: 8px; }
+.dept-add input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 10px; padding: 11px 12px; font-size: 15px; outline: none; }
+.dept-add .btn { flex: none; width: 46px; font-size: 18px; padding: 0; }
+.dept-line { font-size: 12px; color: var(--muted); padding: 3px 8px 0; }
+.memo-view + .dept-line, .m-head + .dept-line { padding-left: 0; }
