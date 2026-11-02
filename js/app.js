@@ -89,7 +89,7 @@
     const done = it.kind === 'todo' && it.done && !opts.noDone;
     const box = opts.box && it.kind === 'todo';
     const cls = `chip ${it.kind === 'todo' ? 'todo' : it.cat}${done ? ' done' : ''}${box ? ' box' : ''}`;
-    return `<div class="${cls}" data-id="${it.id}"${box ? '' : ` style="background:${bg};color:${fg}"`}>`
+    return `<div class="${cls}" data-id="${it.id}" style="${box ? `color:${colorOf(Object.assign({}, it, { kind: 'event' }))}` : `background:${bg};color:${fg}`}">`
       + (box ? `<span class="cb" data-check="${it.id}" role="checkbox" aria-checked="${it.done ? 'true' : 'false'}" aria-label="완료"></span>` : '')
       + (tm ? `<span class="tm">${esc(tm)}</span>` : '')
       + `<span class="tx">${esc(tx || '(제목 없음)')}</span>`

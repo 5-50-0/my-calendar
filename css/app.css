@@ -396,10 +396,10 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
 .sal-total strong { font-size: 18px; font-weight: 600; }
 
 /* 월간 할 일: 체크박스 */
-.chip.box { background: transparent; color: var(--text); padding-left: 1px; }
-.chip.box .cb { flex: none; width: 10px; height: 10px; border: 1.3px solid var(--muted); border-radius: 2.5px; margin-right: 2px; position: relative; }
+.chip.box { background: transparent; padding-left: 1px; }
+.chip.box .cb { flex: none; width: 10px; height: 10px; border: 1.3px solid currentColor; border-radius: 2.5px; margin-right: 2px; position: relative; }
 .chip.box.done { opacity: .45; }
-.chip.box.done .cb { background: var(--muted); border-color: var(--muted); }
+.chip.box.done .cb { background: currentColor; border-color: currentColor; }
 .chip.box.done .cb::after { content: ''; position: absolute; left: 2.6px; top: .2px; width: 2.6px; height: 5.4px; border: solid var(--bg); border-width: 0 1.4px 1.4px 0; transform: rotate(45deg); }
 @media (min-width: 700px) { .chip.box .cb { width: 12px; height: 12px; } .chip.box.done .cb::after { left: 3.2px; top: .4px; width: 3px; height: 6.5px; } }
 
