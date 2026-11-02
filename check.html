@@ -41,6 +41,7 @@
         detail = `<div class="t">${Object.entries(kinds).map(([a, b]) => `${esc(a)} ${b}`).join(' · ')}</div>`
           + `<div class="t">최근 수정: ${esc(live.map(i => i.updatedAt || '').sort().pop() || '-')}</div>`
           + `<div class="t">예: ${live.slice(0, 6).map(i => esc(i.title || i.topic || i.year || '')).join(' / ')}</div>`
+          + (all.length - live.length ? `<div class="t" style="margin-top:8px">삭제 표시된 항목:<br>${all.filter(i => i.deleted).map(i => `· [${esc(i.kind)}] ${esc(i.title || i.topic || i.year || '(제목 없음)')} <span class="muted">${esc((i.updatedAt || '').slice(0, 16).replace('T', ' '))}</span>`).join('<br>')}</div>` : '')
           + `<button data-dl="${idx}">이 데이터 파일로 받기</button>`;
       }
     } catch (e) {}

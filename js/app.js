@@ -256,7 +256,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.4.1<br>마지막 동기화: ${window.Sync && (Sync.loggedIn || Sync.legacyCode) ? ago(Sync.lastSync) : '로그인 전'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.4.2<br>마지막 동기화: ${window.Sync && (Sync.loggedIn || Sync.legacyCode) ? ago(Sync.lastSync) : '로그인 전'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
@@ -287,6 +287,8 @@
     syncBtn.classList.remove('busy'); paintSyncBtn(); renderDrawerFoot();
   };
 
+  const trash = () => Store.allItems().filter(i => i.deleted).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const kindName = it => ({ event: '일정', todo: '할 일', rule: '정기업무', work: '업무', book: '미니북', page: '미니북 내용' })[it.kind] || it.kind;
   // 계정·동기화
   function openSync() {
     let mode = 'login', busy = false;
@@ -295,9 +297,12 @@
         return `<div class="m-head"><h2>계정·동기화</h2>${closeBtn}</div>`
           + `<div class="acct"><div class="acct-mail">${esc(Sync.email)}</div><div class="acct-st">${esc(syncLabel().split(' · ').slice(1).join(' · '))} · 마지막 동기화 ${esc(ago(Sync.lastSync))}</div></div>`
           + `<div class="m-actions"><button class="btn primary" data-refresh style="flex:1">지금 동기화</button></div>`
+          + (trash().length ? `<div class="m-actions"><button class="btn" data-mode="trash" style="flex:1">삭제된 항목 되살리기 (${trash().length}개)</button></div>` : '')
           + (Sync.hasBackup() ? `<div class="legacy-note" style="margin-top:12px">이 기기에 로그인 전 일정 ${Sync.hasBackup()}개가 따로 보관돼 있어요.</div><div class="m-actions"><button class="btn primary" data-restore style="flex:1">이 기기 예전 일정 되살리기</button></div>` : '')
           + (mode === 'pw'
             ? `<div class="field" style="margin-top:14px"><label for="a-cur">지금 비밀번호</label><input type="password" id="a-cur" autocomplete="current-password"></div><div class="field"><label for="a-new">새 비밀번호 (6자 이상)</label><input type="password" id="a-new" autocomplete="new-password"></div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-changepw>비밀번호 바꾸기</button></div>`
+            : mode === 'trash'
+            ? `<div class="trash">${trash().map(it => `<label class="check"><input type="checkbox" class="tr-ck" value="${it.id}" checked>${esc(kindName(it))} · ${esc(it.title || it.topic || it.year || '(제목 없음)')} <span class="sd-r" style="display:inline">${esc((it.updatedAt || '').slice(0, 10))}</span></label>`).join('')}</div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-untrash>고른 항목 되살리기</button></div>`
             : mode === 'import'
             ? `<div class="field" style="margin-top:14px"><label for="a-code">예전 동기화 코드</label><input type="text" id="a-code" autocomplete="off" autocapitalize="characters"></div><div class="m-actions"><button class="btn" data-mode="login">취소</button><button class="btn primary" data-import>가져오기</button></div>`
             : `<div class="sheet" style="margin-top:10px"><button class="sheet-btn" data-mode="import">예전 동기화 코드에서 일정 가져오기</button><button class="sheet-btn" data-mode="pw">비밀번호 바꾸기</button><button class="sheet-btn danger" data-logout>로그아웃</button></div>`);
@@ -336,6 +341,7 @@
         }
         const rf = e.target.closest('[data-refresh]');
         if (rf) { run(rf, async () => { await Sync.refresh(); m.innerHTML = draw(); renderDrawerFoot(); toast('동기화했어요'); }); return; }
+        if (e.target.closest('[data-untrash]')) { const ids = $$('.tr-ck', m).filter(x => x.checked).map(x => x.value); ids.forEach(id => Store.restore(id)); mode = 'login'; m.innerHTML = draw(); render(); toast(`${ids.length}개를 되살렸어요`); return; }
         const rs = e.target.closest('[data-restore]');
         if (rs) { run(rs, async () => { const n = await Sync.restoreBackup(); m.innerHTML = draw(); render(); toast(n ? `일정 ${n}개를 되살렸어요` : '이미 모두 들어 있어요'); }); return; }
         const im = e.target.closest('[data-import]');
