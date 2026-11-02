@@ -81,7 +81,7 @@ button { cursor: pointer; }
   --rule-top: 30.5px;
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--rule-h) - 1px), var(--rule) calc(var(--rule-h) - 1px), var(--rule) var(--rule-h));
   background-position: 0 var(--rule-top); background-repeat: repeat-x; background-size: 100% calc(100% - var(--rule-top)); background-origin: border-box; }
-.wcol { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px); background-position: 0 38px; background-repeat: no-repeat; background-size: 100% calc(100% - 38px); }
+.wcol { background-image: none; background-position: 0 38px; background-repeat: no-repeat; background-size: 100% calc(100% - 38px); }
 .day.out { background-color: var(--bg-out); }
 .day.out > * { opacity: .32; }
 .dh { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 3px 1px 2px; min-height: 25px; overflow: hidden; }
@@ -525,3 +525,6 @@ table.fx tfoot td { font-weight: 600; border-bottom: 0; }
   .bk-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 26px; }
   .cover .ct { font-size: 17px; }
 }
+
+/* 오른쪽 칸 없음 (달력 화면도 전체 폭) */
+.side, body .side { display: none !important; }

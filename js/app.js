@@ -202,18 +202,8 @@
     $('#week-memo').addEventListener('input', e => { clearTimeout(t); const v = e.target.value; t = setTimeout(() => Store.setWeekMemo(mon, v), 400); });
   }
 
-  function renderSide() {
-    const side = $('#side');
-    if (innerWidth < 1100) { side.innerHTML = ''; return; }
-    const k = todayKey();
-    const list = (layout(k, k)[k] || []);
-    const ev = list.filter(e => e.it.kind !== 'todo'), td = list.filter(e => e.it.kind === 'todo');
-    const hol = Holidays.get(k);
-    side.innerHTML = `<div><div class="side-date">${labelDate(k).replace(' (', ' ').replace(')', '요일')}</div><div class="side-sub">${hol ? esc(hol.join(', ')) + ' · ' : ''}일정 ${ev.length} · 할 일 ${td.length}</div></div>`
-      + `<div><h3>오늘 일정</h3><div class="side-box">${ev.length ? ev.map(e => chipHTML(e)).join('') : '<div class="empty">일정 없음</div>'}</div></div>`
-      + `<div><h3>오늘 할 일</h3><div class="side-box">${td.length ? td.map(e => chipHTML(e)).join('') : '<div class="empty">할 일 없음</div>'}</div></div>`
-      + `<div><h3>진행 중 업무</h3><div class="side-note">업무 기능은 2차 제작 때 이 자리에 표시돼요.</div></div>`;
-  }
+  // 오른쪽 '오늘 일정·할 일' 칸은 쓰지 않음
+  function renderSide() { $('#side').innerHTML = ''; }
 
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
