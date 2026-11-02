@@ -151,7 +151,7 @@
     };
     r.depts = r.depts || [];
     A.openModal(draw(), m => {
-      A.deptKeys(m, r, () => { m.innerHTML = draw(); });
+      A.deptKeys(m, r, () => { read(m); m.innerHTML = draw(); });
       m.onclick = e => {
         if (A.deptClick(e, m, r, () => { read(m); m.innerHTML = draw(); })) return;
         const b = e.target.closest('button'); if (!b || b.hasAttribute('data-close')) return;

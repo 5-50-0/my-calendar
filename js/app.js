@@ -478,7 +478,7 @@
     };
     openModal(draw(), m => {
       const redraw = () => { readForm(m); m.innerHTML = draw(); };
-      deptKeys(m, it, () => { m.innerHTML = draw(); });
+      deptKeys(m, it, redraw); // 엔터·목록 선택: 부서만 추가하고 쓰던 내용은 그대로
       m.onclick = e => {
         if (e.target.closest('[data-close]')) return;
         if (deptClick(e, m, it, redraw)) return;
