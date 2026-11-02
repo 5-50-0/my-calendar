@@ -218,7 +218,7 @@
   function renderDrawerFoot() {
     const s = Store.data.savedAt;
     $('#sync-state').textContent = syncLabel();
-    $('#drawer-foot').innerHTML = `앱 버전 1.3.3<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
+    $('#drawer-foot').innerHTML = `앱 버전 1.3.4<br>마지막 동기화: ${window.Sync && Sync.code ? ago(Sync.lastSync) : '연결 안 됨'}<br>일정 ${Store.items().filter(i => i.kind === 'event' || i.kind === 'todo').length}개`;
   }
 
   function syncLabel() {
