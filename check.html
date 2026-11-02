@@ -50,6 +50,62 @@
   if (!keys.length) html = '<div class="box">저장된 데이터가 없어요.</div>';
   out.innerHTML = html;
   out.onclick = e => { const b = e.target.closest('[data-dl]'); if (!b) return; const k = keys[Number(b.dataset.dl)]; download(k + '.json', localStorage.getItem(k)); };
+  // ---- 동기화 캐시(IndexedDB) 안에서 일정 꺼내기 ----
+  const dec = v => {
+    if (!v || typeof v !== 'object') return v;
+    if ('stringValue' in v) return v.stringValue;
+    if ('booleanValue' in v) return v.booleanValue;
+    if ('integerValue' in v) return Number(v.integerValue);
+    if ('doubleValue' in v) return v.doubleValue;
+    if ('nullValue' in v) return null;
+    if ('timestampValue' in v) return v.timestampValue;
+    if ('arrayValue' in v) return ((v.arrayValue || {}).values || []).map(dec);
+    if ('mapValue' in v) return decFields((v.mapValue || {}).fields || {});
+    return undefined;
+  };
+  const decFields = f => { const o = {}; Object.keys(f || {}).forEach(k => { o[k] = dec(f[k]); }); return o; };
+  const found = {};
+  const walk = (x, depth) => {
+    if (!x || typeof x !== 'object' || depth > 12) return;
+    if (x.fields && typeof x.fields === 'object' && x.fields.kind && x.fields.id) {
+      try { const it = decFields(x.fields); if (it.id && it.kind) { const c = found[it.id]; if (!c || (it.updatedAt || '') > (c.updatedAt || '')) found[it.id] = it; } } catch (e) {}
+    }
+    if (Array.isArray(x)) x.forEach(y => walk(y, depth + 1)); else Object.keys(x).forEach(k => walk(x[k], depth + 1));
+  };
+  const readDb = name => new Promise(res => {
+    const rq = indexedDB.open(name);
+    rq.onerror = () => res();
+    rq.onupgradeneeded = () => { try { rq.transaction.abort(); } catch (e) {} res(); };
+    rq.onsuccess = () => {
+      const db = rq.result; const stores = Array.from(db.objectStoreNames);
+      if (!stores.length) { db.close(); res(); return; }
+      let left = stores.length;
+      stores.forEach(st => {
+        try {
+          const cur = db.transaction(st, 'readonly').objectStore(st).openCursor();
+          cur.onsuccess = () => { const c = cur.result; if (c) { walk(c.value, 0); c.continue(); } else if (--left === 0) { db.close(); res(); } };
+          cur.onerror = () => { if (--left === 0) { db.close(); res(); } };
+        } catch (e) { if (--left === 0) { db.close(); res(); } }
+      });
+    };
+  });
+  try {
+    const names = indexedDB.databases ? (await indexedDB.databases()).map(d => d.name).filter(n => /firestore/.test(n)) : ['firestore/[DEFAULT]/my-calendar-6313d/main'];
+    for (const n of names) await readDb(n);
+    const all = Object.values(found), live = all.filter(i => !i.deleted);
+    const kinds = {}; live.forEach(i => { kinds[i.kind] = (kinds[i.kind] || 0) + 1; });
+    const ev = live.filter(i => i.kind === 'event' || i.kind === 'todo').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    out.insertAdjacentHTML('beforeend', `<div class="box" style="border-color:#e0a070"><div class="k">동기화 캐시 안에서 찾은 항목</div><div class="n">항목 ${live.length}개 (삭제 표시 ${all.length - live.length}개)</div>`
+      + `<div class="t">${Object.entries(kinds).map(([a, b]) => `${esc(a)} ${b}`).join(' · ') || '없음'}</div>`
+      + (ev.length ? `<div class="t" style="margin-top:8px">일정·할 일 ${ev.length}개:<br>${ev.slice(0, 300).map(i => `· ${esc(i.date || '')} ${esc(i.title || '')}`).join('<br>')}</div>` : '')
+      + (all.length ? `<button id="dl-cache">찾은 항목 전부 백업 파일로 받기</button>` : '') + `</div>`);
+    const b = document.getElementById('dl-cache');
+    if (b) b.onclick = () => {
+      const items = {}; all.forEach(i => { items[i.id] = i; });
+      download('내일정-캐시에서-꺼낸-백업.json', JSON.stringify({ schema: 1, items, weekMemos: {}, settings: null, savedAt: new Date().toISOString() }, null, 2));
+    };
+  } catch (e) { out.insertAdjacentHTML('beforeend', `<div class="box">캐시를 읽지 못했어요: ${esc(e.message)}</div>`); }
+
   // Firestore가 기기에 남긴 캐시 목록
   try {
     if (indexedDB.databases) {
