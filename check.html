@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 일정 · 저장된 데이터 확인</title>
+<style>
+  body { font-family: system-ui, "Malgun Gothic", sans-serif; background: #323230; color: #eee; margin: 0; padding: 20px; line-height: 1.55; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .box { background: #3a3a38; border: 1px solid #555; border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  .k { font-family: ui-monospace, monospace; font-size: 13px; color: #bbb; }
+  .n { font-size: 18px; font-weight: 700; margin: 4px 0; }
+  .t { font-size: 13px; color: #ccc; }
+  button { font: inherit; font-size: 14px; padding: 9px 14px; border-radius: 10px; border: 1px solid #777; background: #eee; color: #222; margin: 6px 6px 0 0; cursor: pointer; }
+  .muted { color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>이 브라우저에 저장된 일정 데이터</h1>
+<div class="muted">읽기만 하고 아무것도 바꾸지 않아요.</div>
+<div id="out"></div>
+<script>
+(async function () {
+  const out = document.getElementById('out');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const download = (name, text) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+  keys.sort();
+  let html = '';
+  keys.forEach((k, idx) => {
+    const v = localStorage.getItem(k) || '';
+    let info = `${v.length.toLocaleString()}자`;
+    let detail = '';
+    try {
+      const d = JSON.parse(v);
+      if (d && d.items) {
+        const all = Object.values(d.items), live = all.filter(i => !i.deleted);
+        const kinds = {}; live.forEach(i => { kinds[i.kind] = (kinds[i.kind] || 0) + 1; });
+        info = `항목 ${live.length}개 (삭제 표시 ${all.length - live.length}개)`;
+        detail = `<div class="t">${Object.entries(kinds).map(([a, b]) => `${esc(a)} ${b}`).join(' · ')}</div>`
+          + `<div class="t">최근 수정: ${esc(live.map(i => i.updatedAt || '').sort().pop() || '-')}</div>`
+          + `<div class="t">예: ${live.slice(0, 6).map(i => esc(i.title || i.topic || i.year || '')).join(' / ')}</div>`
+          + `<button data-dl="${idx}">이 데이터 파일로 받기</button>`;
+      }
+    } catch (e) {}
+    html += `<div class="box"><div class="k">${esc(k)}</div><div class="n">${info}</div>${detail}</div>`;
+  });
+  if (!keys.length) html = '<div class="box">저장된 데이터가 없어요.</div>';
+  out.innerHTML = html;
+  out.onclick = e => { const b = e.target.closest('[data-dl]'); if (!b) return; const k = keys[Number(b.dataset.dl)]; download(k + '.json', localStorage.getItem(k)); };
+  // Firestore가 기기에 남긴 캐시 목록
+  try {
+    if (indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      out.insertAdjacentHTML('beforeend', `<div class="box"><div class="k">기기 캐시</div><div class="t">${dbs.map(d => esc(d.name)).join('<br>') || '없음'}</div></div>`);
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
